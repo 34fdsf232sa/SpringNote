@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
@@ -745,40 +744,120 @@ class _ThinkingControl extends StatelessWidget {
       context,
     ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, height: 1);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: CupertinoSlidingSegmentedControl<String>(
-        groupValue: value,
-        backgroundColor: const Color(0xFFF1F5F9),
-        thumbColor: Colors.white,
-        padding: const EdgeInsets.all(3),
-        children: {
-          'disabled': Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            child: Text('Disable', style: labelStyle),
-          ),
-          'high': Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            child: Text('High', style: labelStyle),
-          ),
-          'max': Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            child: Text('Max', style: labelStyle),
-          ),
+    final selectedIndex = switch (value) {
+      'high' => 1,
+      'max' => 2,
+      _ => 0,
+    };
+
+    return SizedBox(
+      width: 214,
+      height: 36,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final segmentWidth = constraints.maxWidth / 3;
+          return Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Stack(
+              children: [
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  left: selectedIndex * segmentWidth + 3,
+                  top: 3,
+                  width: segmentWidth - 6,
+                  height: 28,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x140F172A),
+                          blurRadius: 10,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    _ThinkingSegment(
+                      label: 'Disable',
+                      selected: selectedIndex == 0,
+                      style: labelStyle,
+                      onTap: () => onEnabledChanged(false),
+                    ),
+                    _ThinkingSegment(
+                      label: 'High',
+                      selected: selectedIndex == 1,
+                      style: labelStyle,
+                      onTap: () {
+                        if (!enabled) {
+                          onEnabledChanged(true);
+                        }
+                        onEffortChanged('high');
+                      },
+                    ),
+                    _ThinkingSegment(
+                      label: 'Max',
+                      selected: selectedIndex == 2,
+                      style: labelStyle,
+                      onTap: () {
+                        if (!enabled) {
+                          onEnabledChanged(true);
+                        }
+                        onEffortChanged('max');
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
         },
-        onValueChanged: (next) {
-          if (next == null) {
-            return;
-          }
-          if (next == 'disabled') {
-            onEnabledChanged(false);
-            return;
-          }
-          if (!enabled) {
-            onEnabledChanged(true);
-          }
-          onEffortChanged(next);
-        },
+      ),
+    );
+  }
+}
+
+class _ThinkingSegment extends StatelessWidget {
+  const _ThinkingSegment({
+    required this.label,
+    required this.selected,
+    required this.style,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final TextStyle? style;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Center(
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 140),
+            style:
+                style?.copyWith(
+                  color: selected ? AppTheme.text : AppTheme.textSubtle,
+                ) ??
+                TextStyle(
+                  color: selected ? AppTheme.text : AppTheme.textSubtle,
+                ),
+            child: Text(label),
+          ),
+        ),
       ),
     );
   }
