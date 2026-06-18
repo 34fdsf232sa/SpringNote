@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -341204124;
+  int get rustContentHash => 495463959;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -116,6 +116,14 @@ abstract class RustLibApi extends BaseApi {
 
   Future<AiTextResult> crateApiAiApiMemoryChat({
     required MemoryChatRequest request,
+  });
+
+  Future<MemoryToolChatResult> crateApiAiApiMemoryToolChat({
+    required MemoryToolChatRequest request,
+  });
+
+  Stream<MemoryToolChatStreamEvent> crateApiAiApiMemoryToolChatStream({
+    required MemoryToolChatRequest request,
   });
 
   Future<AiTextResult> crateApiAiApiMergeDailyNote({
@@ -431,6 +439,80 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "memory_chat", argNames: ["request"]);
 
   @override
+  Future<MemoryToolChatResult> crateApiAiApiMemoryToolChat({
+    required MemoryToolChatRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_memory_tool_chat_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_memory_tool_chat_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAiApiMemoryToolChatConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAiApiMemoryToolChatConstMeta =>
+      const TaskConstMeta(debugName: "memory_tool_chat", argNames: ["request"]);
+
+  @override
+  Stream<MemoryToolChatStreamEvent> crateApiAiApiMemoryToolChatStream({
+    required MemoryToolChatRequest request,
+  }) {
+    final sink = RustStreamSink<MemoryToolChatStreamEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_box_autoadd_memory_tool_chat_request(
+              request,
+              serializer,
+            );
+            sse_encode_StreamSink_memory_tool_chat_stream_event_Sse(
+              sink,
+              serializer,
+            );
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 10,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiAiApiMemoryToolChatStreamConstMeta,
+          argValues: [request, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiAiApiMemoryToolChatStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "memory_tool_chat_stream",
+        argNames: ["request", "sink"],
+      );
+
+  @override
   Future<AiTextResult> crateApiAiApiMergeDailyNote({
     required DailyMergeRequest request,
   }) {
@@ -442,7 +524,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 11,
             port: port_,
           );
         },
@@ -470,7 +552,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 12,
             port: port_,
           );
         },
@@ -503,7 +585,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 13,
             port: port_,
           );
         },
@@ -540,7 +622,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 14,
             port: port_,
           );
         },
@@ -579,7 +661,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 15,
             port: port_,
           );
         },
@@ -601,9 +683,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
+  }
+
+  @protected
+  RustStreamSink<MemoryToolChatStreamEvent>
+  dco_decode_StreamSink_memory_tool_chat_stream_event_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as String;
+  }
+
+  @protected
+  AiChatMessage dco_decode_ai_chat_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return AiChatMessage(
+      role: dco_decode_String(arr[0]),
+      content: dco_decode_String(arr[1]),
+      reasoningContent: dco_decode_String(arr[2]),
+      toolCallId: dco_decode_String(arr[3]),
+      toolCalls: dco_decode_list_ai_tool_call(arr[4]),
+    );
   }
 
   @protected
@@ -654,6 +764,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AiToolCall dco_decode_ai_tool_call(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return AiToolCall(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      arguments: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
@@ -687,6 +810,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MemoryChatRequest dco_decode_box_autoadd_memory_chat_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_memory_chat_request(raw);
+  }
+
+  @protected
+  MemoryToolChatRequest dco_decode_box_autoadd_memory_tool_chat_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_memory_tool_chat_request(raw);
   }
 
   @protected
@@ -785,9 +916,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<AiChatMessage> dco_decode_list_ai_chat_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ai_chat_message).toList();
+  }
+
+  @protected
   List<AiModel> dco_decode_list_ai_model(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_ai_model).toList();
+  }
+
+  @protected
+  List<AiToolCall> dco_decode_list_ai_tool_call(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ai_tool_call).toList();
   }
 
   @protected
@@ -827,6 +970,67 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       question: dco_decode_String(arr[3]),
       contextMarkdown: dco_decode_String(arr[4]),
       apiLogEnabled: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  MemoryToolChatRequest dco_decode_memory_tool_chat_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return MemoryToolChatRequest(
+      appDataDir: dco_decode_String(arr[0]),
+      provider: dco_decode_ai_provider(arr[1]),
+      model: dco_decode_ai_model(arr[2]),
+      messages: dco_decode_list_ai_chat_message(arr[3]),
+      thinkingEnabled: dco_decode_bool(arr[4]),
+      reasoningEffort: dco_decode_String(arr[5]),
+      apiLogEnabled: dco_decode_bool(arr[6]),
+    );
+  }
+
+  @protected
+  MemoryToolChatResult dco_decode_memory_tool_chat_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return MemoryToolChatResult(
+      ok: dco_decode_bool(arr[0]),
+      content: dco_decode_String(arr[1]),
+      reasoningContent: dco_decode_String(arr[2]),
+      toolCalls: dco_decode_list_ai_tool_call(arr[3]),
+      errorCode: dco_decode_String(arr[4]),
+      errorMessage: dco_decode_String(arr[5]),
+      inputTokens: dco_decode_i_32(arr[6]),
+      outputTokens: dco_decode_i_32(arr[7]),
+      cachedTokens: dco_decode_i_32(arr[8]),
+      providerName: dco_decode_String(arr[9]),
+      modelId: dco_decode_String(arr[10]),
+    );
+  }
+
+  @protected
+  MemoryToolChatStreamEvent dco_decode_memory_tool_chat_stream_event(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return MemoryToolChatStreamEvent(
+      eventType: dco_decode_String(arr[0]),
+      contentDelta: dco_decode_String(arr[1]),
+      reasoningDelta: dco_decode_String(arr[2]),
+      content: dco_decode_String(arr[3]),
+      reasoningContent: dco_decode_String(arr[4]),
+      toolCalls: dco_decode_list_ai_tool_call(arr[5]),
+      errorCode: dco_decode_String(arr[6]),
+      errorMessage: dco_decode_String(arr[7]),
+      inputTokens: dco_decode_i_32(arr[8]),
+      outputTokens: dco_decode_i_32(arr[9]),
+      cachedTokens: dco_decode_i_32(arr[10]),
     );
   }
 
@@ -971,10 +1175,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  RustStreamSink<MemoryToolChatStreamEvent>
+  sse_decode_StreamSink_memory_tool_chat_stream_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
     return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  AiChatMessage sse_decode_ai_chat_message(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_role = sse_decode_String(deserializer);
+    var var_content = sse_decode_String(deserializer);
+    var var_reasoningContent = sse_decode_String(deserializer);
+    var var_toolCallId = sse_decode_String(deserializer);
+    var var_toolCalls = sse_decode_list_ai_tool_call(deserializer);
+    return AiChatMessage(
+      role: var_role,
+      content: var_content,
+      reasoningContent: var_reasoningContent,
+      toolCallId: var_toolCallId,
+      toolCalls: var_toolCalls,
+    );
   }
 
   @protected
@@ -1030,6 +1267,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AiToolCall sse_decode_ai_tool_call(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_arguments = sse_decode_String(deserializer);
+    return AiToolCall(id: var_id, name: var_name, arguments: var_arguments);
+  }
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
@@ -1069,6 +1315,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_memory_chat_request(deserializer));
+  }
+
+  @protected
+  MemoryToolChatRequest sse_decode_box_autoadd_memory_tool_chat_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_memory_tool_chat_request(deserializer));
   }
 
   @protected
@@ -1187,6 +1441,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<AiChatMessage> sse_decode_list_ai_chat_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AiChatMessage>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ai_chat_message(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<AiModel> sse_decode_list_ai_model(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1194,6 +1462,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <AiModel>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_ai_model(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AiToolCall> sse_decode_list_ai_tool_call(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AiToolCall>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ai_tool_call(deserializer));
     }
     return ans_;
   }
@@ -1265,6 +1545,91 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       question: var_question,
       contextMarkdown: var_contextMarkdown,
       apiLogEnabled: var_apiLogEnabled,
+    );
+  }
+
+  @protected
+  MemoryToolChatRequest sse_decode_memory_tool_chat_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_appDataDir = sse_decode_String(deserializer);
+    var var_provider = sse_decode_ai_provider(deserializer);
+    var var_model = sse_decode_ai_model(deserializer);
+    var var_messages = sse_decode_list_ai_chat_message(deserializer);
+    var var_thinkingEnabled = sse_decode_bool(deserializer);
+    var var_reasoningEffort = sse_decode_String(deserializer);
+    var var_apiLogEnabled = sse_decode_bool(deserializer);
+    return MemoryToolChatRequest(
+      appDataDir: var_appDataDir,
+      provider: var_provider,
+      model: var_model,
+      messages: var_messages,
+      thinkingEnabled: var_thinkingEnabled,
+      reasoningEffort: var_reasoningEffort,
+      apiLogEnabled: var_apiLogEnabled,
+    );
+  }
+
+  @protected
+  MemoryToolChatResult sse_decode_memory_tool_chat_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_ok = sse_decode_bool(deserializer);
+    var var_content = sse_decode_String(deserializer);
+    var var_reasoningContent = sse_decode_String(deserializer);
+    var var_toolCalls = sse_decode_list_ai_tool_call(deserializer);
+    var var_errorCode = sse_decode_String(deserializer);
+    var var_errorMessage = sse_decode_String(deserializer);
+    var var_inputTokens = sse_decode_i_32(deserializer);
+    var var_outputTokens = sse_decode_i_32(deserializer);
+    var var_cachedTokens = sse_decode_i_32(deserializer);
+    var var_providerName = sse_decode_String(deserializer);
+    var var_modelId = sse_decode_String(deserializer);
+    return MemoryToolChatResult(
+      ok: var_ok,
+      content: var_content,
+      reasoningContent: var_reasoningContent,
+      toolCalls: var_toolCalls,
+      errorCode: var_errorCode,
+      errorMessage: var_errorMessage,
+      inputTokens: var_inputTokens,
+      outputTokens: var_outputTokens,
+      cachedTokens: var_cachedTokens,
+      providerName: var_providerName,
+      modelId: var_modelId,
+    );
+  }
+
+  @protected
+  MemoryToolChatStreamEvent sse_decode_memory_tool_chat_stream_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_eventType = sse_decode_String(deserializer);
+    var var_contentDelta = sse_decode_String(deserializer);
+    var var_reasoningDelta = sse_decode_String(deserializer);
+    var var_content = sse_decode_String(deserializer);
+    var var_reasoningContent = sse_decode_String(deserializer);
+    var var_toolCalls = sse_decode_list_ai_tool_call(deserializer);
+    var var_errorCode = sse_decode_String(deserializer);
+    var var_errorMessage = sse_decode_String(deserializer);
+    var var_inputTokens = sse_decode_i_32(deserializer);
+    var var_outputTokens = sse_decode_i_32(deserializer);
+    var var_cachedTokens = sse_decode_i_32(deserializer);
+    return MemoryToolChatStreamEvent(
+      eventType: var_eventType,
+      contentDelta: var_contentDelta,
+      reasoningDelta: var_reasoningDelta,
+      content: var_content,
+      reasoningContent: var_reasoningContent,
+      toolCalls: var_toolCalls,
+      errorCode: var_errorCode,
+      errorMessage: var_errorMessage,
+      inputTokens: var_inputTokens,
+      outputTokens: var_outputTokens,
+      cachedTokens: var_cachedTokens,
     );
   }
 
@@ -1440,9 +1805,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_StreamSink_memory_tool_chat_stream_event_Sse(
+    RustStreamSink<MemoryToolChatStreamEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_memory_tool_chat_stream_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_ai_chat_message(
+    AiChatMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.role, serializer);
+    sse_encode_String(self.content, serializer);
+    sse_encode_String(self.reasoningContent, serializer);
+    sse_encode_String(self.toolCallId, serializer);
+    sse_encode_list_ai_tool_call(self.toolCalls, serializer);
   }
 
   @protected
@@ -1475,6 +1879,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.cachedTokens, serializer);
     sse_encode_String(self.providerName, serializer);
     sse_encode_String(self.modelId, serializer);
+  }
+
+  @protected
+  void sse_encode_ai_tool_call(AiToolCall self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.arguments, serializer);
   }
 
   @protected
@@ -1523,6 +1935,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_memory_chat_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_memory_tool_chat_request(
+    MemoryToolChatRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_memory_tool_chat_request(self, serializer);
   }
 
   @protected
@@ -1617,11 +2038,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_ai_chat_message(
+    List<AiChatMessage> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ai_chat_message(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_ai_model(List<AiModel> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_ai_model(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ai_tool_call(
+    List<AiToolCall> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ai_tool_call(item, serializer);
     }
   }
 
@@ -1683,6 +2128,59 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.question, serializer);
     sse_encode_String(self.contextMarkdown, serializer);
     sse_encode_bool(self.apiLogEnabled, serializer);
+  }
+
+  @protected
+  void sse_encode_memory_tool_chat_request(
+    MemoryToolChatRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.appDataDir, serializer);
+    sse_encode_ai_provider(self.provider, serializer);
+    sse_encode_ai_model(self.model, serializer);
+    sse_encode_list_ai_chat_message(self.messages, serializer);
+    sse_encode_bool(self.thinkingEnabled, serializer);
+    sse_encode_String(self.reasoningEffort, serializer);
+    sse_encode_bool(self.apiLogEnabled, serializer);
+  }
+
+  @protected
+  void sse_encode_memory_tool_chat_result(
+    MemoryToolChatResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.ok, serializer);
+    sse_encode_String(self.content, serializer);
+    sse_encode_String(self.reasoningContent, serializer);
+    sse_encode_list_ai_tool_call(self.toolCalls, serializer);
+    sse_encode_String(self.errorCode, serializer);
+    sse_encode_String(self.errorMessage, serializer);
+    sse_encode_i_32(self.inputTokens, serializer);
+    sse_encode_i_32(self.outputTokens, serializer);
+    sse_encode_i_32(self.cachedTokens, serializer);
+    sse_encode_String(self.providerName, serializer);
+    sse_encode_String(self.modelId, serializer);
+  }
+
+  @protected
+  void sse_encode_memory_tool_chat_stream_event(
+    MemoryToolChatStreamEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.eventType, serializer);
+    sse_encode_String(self.contentDelta, serializer);
+    sse_encode_String(self.reasoningDelta, serializer);
+    sse_encode_String(self.content, serializer);
+    sse_encode_String(self.reasoningContent, serializer);
+    sse_encode_list_ai_tool_call(self.toolCalls, serializer);
+    sse_encode_String(self.errorCode, serializer);
+    sse_encode_String(self.errorMessage, serializer);
+    sse_encode_i_32(self.inputTokens, serializer);
+    sse_encode_i_32(self.outputTokens, serializer);
+    sse_encode_i_32(self.cachedTokens, serializer);
   }
 
   @protected

@@ -24,6 +24,14 @@ Future<AiTextResult> generateMonthlyReport({required ReportRequest request}) =>
 Future<AiTextResult> memoryChat({required MemoryChatRequest request}) =>
     RustLib.instance.api.crateApiAiApiMemoryChat(request: request);
 
+Future<MemoryToolChatResult> memoryToolChat({
+  required MemoryToolChatRequest request,
+}) => RustLib.instance.api.crateApiAiApiMemoryToolChat(request: request);
+
+Stream<MemoryToolChatStreamEvent> memoryToolChatStream({
+  required MemoryToolChatRequest request,
+}) => RustLib.instance.api.crateApiAiApiMemoryToolChatStream(request: request);
+
 Future<AiTextResult> fimComplete({required FimCompleteRequest request}) =>
     RustLib.instance.api.crateApiAiApiFimComplete(request: request);
 

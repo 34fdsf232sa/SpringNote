@@ -22,7 +22,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  RustStreamSink<MemoryToolChatStreamEvent>
+  dco_decode_StreamSink_memory_tool_chat_stream_event_Sse(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  AiChatMessage dco_decode_ai_chat_message(dynamic raw);
 
   @protected
   AiModel dco_decode_ai_model(dynamic raw);
@@ -32,6 +42,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AiTextResult dco_decode_ai_text_result(dynamic raw);
+
+  @protected
+  AiToolCall dco_decode_ai_tool_call(dynamic raw);
 
   @protected
   bool dco_decode_bool(dynamic raw);
@@ -50,6 +63,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MemoryChatRequest dco_decode_box_autoadd_memory_chat_request(dynamic raw);
+
+  @protected
+  MemoryToolChatRequest dco_decode_box_autoadd_memory_tool_chat_request(
+    dynamic raw,
+  );
 
   @protected
   ReportRequest dco_decode_box_autoadd_report_request(dynamic raw);
@@ -81,7 +99,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<AiChatMessage> dco_decode_list_ai_chat_message(dynamic raw);
+
+  @protected
   List<AiModel> dco_decode_list_ai_model(dynamic raw);
+
+  @protected
+  List<AiToolCall> dco_decode_list_ai_tool_call(dynamic raw);
 
   @protected
   List<DailyActivity> dco_decode_list_daily_activity(dynamic raw);
@@ -97,6 +121,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MemoryChatRequest dco_decode_memory_chat_request(dynamic raw);
+
+  @protected
+  MemoryToolChatRequest dco_decode_memory_tool_chat_request(dynamic raw);
+
+  @protected
+  MemoryToolChatResult dco_decode_memory_tool_chat_result(dynamic raw);
+
+  @protected
+  MemoryToolChatStreamEvent dco_decode_memory_tool_chat_stream_event(
+    dynamic raw,
+  );
 
   @protected
   ModelListResult dco_decode_model_list_result(dynamic raw);
@@ -129,7 +164,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<MemoryToolChatStreamEvent>
+  sse_decode_StreamSink_memory_tool_chat_stream_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  AiChatMessage sse_decode_ai_chat_message(SseDeserializer deserializer);
 
   @protected
   AiModel sse_decode_ai_model(SseDeserializer deserializer);
@@ -139,6 +186,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AiTextResult sse_decode_ai_text_result(SseDeserializer deserializer);
+
+  @protected
+  AiToolCall sse_decode_ai_tool_call(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
@@ -161,6 +211,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MemoryChatRequest sse_decode_box_autoadd_memory_chat_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  MemoryToolChatRequest sse_decode_box_autoadd_memory_tool_chat_request(
     SseDeserializer deserializer,
   );
 
@@ -200,7 +255,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<AiChatMessage> sse_decode_list_ai_chat_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<AiModel> sse_decode_list_ai_model(SseDeserializer deserializer);
+
+  @protected
+  List<AiToolCall> sse_decode_list_ai_tool_call(SseDeserializer deserializer);
 
   @protected
   List<DailyActivity> sse_decode_list_daily_activity(
@@ -222,6 +285,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MemoryChatRequest sse_decode_memory_chat_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  MemoryToolChatRequest sse_decode_memory_tool_chat_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  MemoryToolChatResult sse_decode_memory_tool_chat_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  MemoryToolChatStreamEvent sse_decode_memory_tool_chat_stream_event(
     SseDeserializer deserializer,
   );
 
@@ -264,7 +342,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_memory_tool_chat_stream_event_Sse(
+    RustStreamSink<MemoryToolChatStreamEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ai_chat_message(AiChatMessage self, SseSerializer serializer);
 
   @protected
   void sse_encode_ai_model(AiModel self, SseSerializer serializer);
@@ -274,6 +367,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_ai_text_result(AiTextResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ai_tool_call(AiToolCall self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
@@ -302,6 +398,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_memory_chat_request(
     MemoryChatRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_memory_tool_chat_request(
+    MemoryToolChatRequest self,
     SseSerializer serializer,
   );
 
@@ -348,7 +450,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_ai_chat_message(
+    List<AiChatMessage> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_ai_model(List<AiModel> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_ai_tool_call(
+    List<AiToolCall> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_daily_activity(
@@ -377,6 +491,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_memory_chat_request(
     MemoryChatRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_memory_tool_chat_request(
+    MemoryToolChatRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_memory_tool_chat_result(
+    MemoryToolChatResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_memory_tool_chat_stream_event(
+    MemoryToolChatStreamEvent self,
     SseSerializer serializer,
   );
 

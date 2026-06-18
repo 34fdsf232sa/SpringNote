@@ -6,6 +6,41 @@
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+class AiChatMessage {
+  final String role;
+  final String content;
+  final String reasoningContent;
+  final String toolCallId;
+  final List<AiToolCall> toolCalls;
+
+  const AiChatMessage({
+    required this.role,
+    required this.content,
+    required this.reasoningContent,
+    required this.toolCallId,
+    required this.toolCalls,
+  });
+
+  @override
+  int get hashCode =>
+      role.hashCode ^
+      content.hashCode ^
+      reasoningContent.hashCode ^
+      toolCallId.hashCode ^
+      toolCalls.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AiChatMessage &&
+          runtimeType == other.runtimeType &&
+          role == other.role &&
+          content == other.content &&
+          reasoningContent == other.reasoningContent &&
+          toolCallId == other.toolCallId &&
+          toolCalls == other.toolCalls;
+}
+
 class AiModel {
   final String modelId;
   final String displayName;
@@ -112,6 +147,30 @@ class AiTextResult {
           cachedTokens == other.cachedTokens &&
           providerName == other.providerName &&
           modelId == other.modelId;
+}
+
+class AiToolCall {
+  final String id;
+  final String name;
+  final String arguments;
+
+  const AiToolCall({
+    required this.id,
+    required this.name,
+    required this.arguments,
+  });
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode ^ arguments.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AiToolCall &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          arguments == other.arguments;
 }
 
 class DailyMergeRequest {
@@ -245,6 +304,167 @@ class MemoryChatRequest {
           question == other.question &&
           contextMarkdown == other.contextMarkdown &&
           apiLogEnabled == other.apiLogEnabled;
+}
+
+class MemoryToolChatRequest {
+  final String appDataDir;
+  final AiProvider provider;
+  final AiModel model;
+  final List<AiChatMessage> messages;
+  final bool thinkingEnabled;
+  final String reasoningEffort;
+  final bool apiLogEnabled;
+
+  const MemoryToolChatRequest({
+    required this.appDataDir,
+    required this.provider,
+    required this.model,
+    required this.messages,
+    required this.thinkingEnabled,
+    required this.reasoningEffort,
+    required this.apiLogEnabled,
+  });
+
+  @override
+  int get hashCode =>
+      appDataDir.hashCode ^
+      provider.hashCode ^
+      model.hashCode ^
+      messages.hashCode ^
+      thinkingEnabled.hashCode ^
+      reasoningEffort.hashCode ^
+      apiLogEnabled.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MemoryToolChatRequest &&
+          runtimeType == other.runtimeType &&
+          appDataDir == other.appDataDir &&
+          provider == other.provider &&
+          model == other.model &&
+          messages == other.messages &&
+          thinkingEnabled == other.thinkingEnabled &&
+          reasoningEffort == other.reasoningEffort &&
+          apiLogEnabled == other.apiLogEnabled;
+}
+
+class MemoryToolChatResult {
+  final bool ok;
+  final String content;
+  final String reasoningContent;
+  final List<AiToolCall> toolCalls;
+  final String errorCode;
+  final String errorMessage;
+  final int inputTokens;
+  final int outputTokens;
+  final int cachedTokens;
+  final String providerName;
+  final String modelId;
+
+  const MemoryToolChatResult({
+    required this.ok,
+    required this.content,
+    required this.reasoningContent,
+    required this.toolCalls,
+    required this.errorCode,
+    required this.errorMessage,
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.cachedTokens,
+    required this.providerName,
+    required this.modelId,
+  });
+
+  @override
+  int get hashCode =>
+      ok.hashCode ^
+      content.hashCode ^
+      reasoningContent.hashCode ^
+      toolCalls.hashCode ^
+      errorCode.hashCode ^
+      errorMessage.hashCode ^
+      inputTokens.hashCode ^
+      outputTokens.hashCode ^
+      cachedTokens.hashCode ^
+      providerName.hashCode ^
+      modelId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MemoryToolChatResult &&
+          runtimeType == other.runtimeType &&
+          ok == other.ok &&
+          content == other.content &&
+          reasoningContent == other.reasoningContent &&
+          toolCalls == other.toolCalls &&
+          errorCode == other.errorCode &&
+          errorMessage == other.errorMessage &&
+          inputTokens == other.inputTokens &&
+          outputTokens == other.outputTokens &&
+          cachedTokens == other.cachedTokens &&
+          providerName == other.providerName &&
+          modelId == other.modelId;
+}
+
+class MemoryToolChatStreamEvent {
+  final String eventType;
+  final String contentDelta;
+  final String reasoningDelta;
+  final String content;
+  final String reasoningContent;
+  final List<AiToolCall> toolCalls;
+  final String errorCode;
+  final String errorMessage;
+  final int inputTokens;
+  final int outputTokens;
+  final int cachedTokens;
+
+  const MemoryToolChatStreamEvent({
+    required this.eventType,
+    required this.contentDelta,
+    required this.reasoningDelta,
+    required this.content,
+    required this.reasoningContent,
+    required this.toolCalls,
+    required this.errorCode,
+    required this.errorMessage,
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.cachedTokens,
+  });
+
+  @override
+  int get hashCode =>
+      eventType.hashCode ^
+      contentDelta.hashCode ^
+      reasoningDelta.hashCode ^
+      content.hashCode ^
+      reasoningContent.hashCode ^
+      toolCalls.hashCode ^
+      errorCode.hashCode ^
+      errorMessage.hashCode ^
+      inputTokens.hashCode ^
+      outputTokens.hashCode ^
+      cachedTokens.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MemoryToolChatStreamEvent &&
+          runtimeType == other.runtimeType &&
+          eventType == other.eventType &&
+          contentDelta == other.contentDelta &&
+          reasoningDelta == other.reasoningDelta &&
+          content == other.content &&
+          reasoningContent == other.reasoningContent &&
+          toolCalls == other.toolCalls &&
+          errorCode == other.errorCode &&
+          errorMessage == other.errorMessage &&
+          inputTokens == other.inputTokens &&
+          outputTokens == other.outputTokens &&
+          cachedTokens == other.cachedTokens;
 }
 
 class ModelListResult {

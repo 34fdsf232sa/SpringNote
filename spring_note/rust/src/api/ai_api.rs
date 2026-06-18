@@ -1,8 +1,10 @@
 use crate::ai::{
     self, AiModel, AiProvider, AiTextResult, DailyMergeRequest, FimCompleteRequest,
-    MemoryChatRequest, ModelListResult, ProviderTestResult, ReportRequest, StructuredNoteRequest,
+    MemoryChatRequest, MemoryToolChatRequest, MemoryToolChatResult, MemoryToolChatStreamEvent,
+    ModelListResult, ProviderTestResult, ReportRequest, StructuredNoteRequest,
     StructuredNoteResult,
 };
+use crate::frb_generated::StreamSink;
 
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {
@@ -27,6 +29,17 @@ pub async fn generate_monthly_report(request: ReportRequest) -> AiTextResult {
 
 pub async fn memory_chat(request: MemoryChatRequest) -> AiTextResult {
     ai::memory_chat(request).await
+}
+
+pub async fn memory_tool_chat(request: MemoryToolChatRequest) -> MemoryToolChatResult {
+    ai::memory_tool_chat(request).await
+}
+
+pub async fn memory_tool_chat_stream(
+    request: MemoryToolChatRequest,
+    sink: StreamSink<MemoryToolChatStreamEvent>,
+) {
+    ai::memory_tool_chat_stream(request, sink).await
 }
 
 pub async fn fim_complete(request: FimCompleteRequest) -> AiTextResult {

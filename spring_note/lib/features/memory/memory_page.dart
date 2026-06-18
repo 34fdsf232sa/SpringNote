@@ -1,12 +1,362 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 
 import '../../core/models/local_data_state.dart';
+import '../../core/models/memory_message.dart';
+import '../../core/services/ai_client_service.dart';
+import '../../core/services/memory_conversation_service.dart';
+import '../../core/services/memory_search_service.dart';
 import '../../core/theme/app_theme.dart';
 
-class MemoryPage extends StatelessWidget {
-  const MemoryPage({super.key, required this.localDataState});
+class MemoryPage extends StatefulWidget {
+  const MemoryPage({
+    super.key,
+    required this.localDataState,
+    this.aiClientService = const AiClientService(),
+    this.conversationService = const MemoryConversationService(),
+    this.searchService = const MemorySearchService(),
+  });
 
   final LocalDataState localDataState;
+  final AiClientService aiClientService;
+  final MemoryConversationService conversationService;
+  final MemorySearchService searchService;
+
+  @override
+  State<MemoryPage> createState() => _MemoryPageState();
+}
+
+class _MemoryPageState extends State<MemoryPage> {
+  final TextEditingController _entryController = TextEditingController();
+  final TextEditingController _chatController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final FocusNode _entryFocusNode = FocusNode();
+  final FocusNode _chatFocusNode = FocusNode();
+
+  List<MemoryMessage> _messages = [];
+  bool _loading = true;
+  bool _answering = false;
+  bool _thinkingEnabled = true;
+  String _reasoningEffort = 'high';
+
+  bool get _inChat => _messages.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
+
+  @override
+  void didUpdateWidget(covariant MemoryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.localDataState.dataDirectory !=
+        oldWidget.localDataState.dataDirectory) {
+      _loadMessages();
+    }
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    _chatController.dispose();
+    _scrollController.dispose();
+    _entryFocusNode.dispose();
+    _chatFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMessages() async {
+    final messages = await widget.conversationService.readMessages(
+      appDataDir: widget.localDataState.dataDirectory,
+    );
+    if (mounted) {
+      setState(() {
+        _messages = messages;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _newConversation() async {
+    await widget.conversationService.clear(
+      appDataDir: widget.localDataState.dataDirectory,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _messages = [];
+      _answering = false;
+      _entryController.clear();
+      _chatController.clear();
+    });
+    _entryFocusNode.requestFocus();
+  }
+
+  Future<void> _sendFromEntry() => _send(_entryController.text);
+
+  Future<void> _sendFromChat() => _send(_chatController.text);
+
+  Future<void> _send(String rawQuestion) async {
+    final question = rawQuestion.trim();
+    if (question.isEmpty || _answering) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final userMessage = MemoryMessage(
+      role: 'user',
+      content: question,
+      createdAt: now,
+    );
+
+    setState(() {
+      _messages = [..._messages, userMessage];
+      _answering = true;
+      _entryController.clear();
+      _chatController.clear();
+    });
+    await _persist();
+    _scrollToBottom();
+
+    final aiMessage = await _runToolCallingLoop(question);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      if (aiMessage != null) {
+        _messages = [..._messages, aiMessage];
+      }
+      _answering = false;
+    });
+    await _persist();
+    _scrollToBottom();
+    _chatFocusNode.requestFocus();
+  }
+
+  Future<MemoryMessage?> _runToolCallingLoop(String question) async {
+    final maxTurns = widget.localDataState.config.memorySearchLimit
+        .round()
+        .clamp(1, 12);
+    final turnSources = <MemorySource>[];
+
+    for (var turn = 0; turn < maxTurns; turn++) {
+      final stream = widget.aiClientService.memoryToolChatStream(
+        appDataDir: widget.localDataState.dataDirectory,
+        config: widget.localDataState.config,
+        messages: _messages,
+        thinkingEnabled: _thinkingEnabled,
+        reasoningEffort: _reasoningEffort,
+      );
+
+      if (stream == null) {
+        return _fallbackLocalAnswer(question);
+      }
+
+      var visibleIndex = -1;
+      var content = '';
+      var reasoningContent = '';
+      var toolCalls = <MemoryToolCallMessage>[];
+      await for (final event in stream) {
+        if (event.eventType == 'error') {
+          return MemoryMessage(
+            role: 'ai',
+            content: event.errorMessage.trim().isEmpty
+                ? '模型请求失败。'
+                : event.errorMessage.trim(),
+            createdAt: DateTime.now(),
+            sources: turnSources,
+          );
+        }
+        if (event.eventType == 'delta') {
+          content = event.content;
+          reasoningContent = event.reasoningContent;
+          visibleIndex = _upsertStreamingMessage(
+            visibleIndex,
+            content: content,
+            reasoningContent: reasoningContent,
+            sources: turnSources,
+          );
+          _scrollToBottom();
+        }
+        if (event.eventType == 'done') {
+          content = event.content;
+          reasoningContent = event.reasoningContent;
+          toolCalls = event.toolCalls
+              .map(
+                (toolCall) => MemoryToolCallMessage(
+                  id: toolCall.id,
+                  name: toolCall.name,
+                  arguments: toolCall.arguments,
+                ),
+              )
+              .toList();
+        }
+      }
+
+      if (toolCalls.isEmpty) {
+        final finalMessage = MemoryMessage(
+          role: 'ai',
+          content: content.trim().isEmpty ? '我没有拿到可用回答。' : content.trim(),
+          reasoningContent: reasoningContent.trim(),
+          createdAt: DateTime.now(),
+          sources: turnSources,
+        );
+        if (visibleIndex >= 0) {
+          setState(() {
+            final updated = [..._messages];
+            updated[visibleIndex] = finalMessage;
+            _messages = updated;
+          });
+          await _persist();
+          return null;
+        }
+        return finalMessage;
+      }
+
+      final assistantToolMessage = MemoryMessage(
+        role: 'assistant',
+        content: content,
+        reasoningContent: reasoningContent,
+        createdAt: DateTime.now(),
+        toolCalls: toolCalls,
+      );
+      setState(() {
+        if (visibleIndex >= 0 && visibleIndex < _messages.length) {
+          final updated = [..._messages];
+          updated[visibleIndex] = assistantToolMessage;
+          _messages = updated;
+        } else {
+          _messages = [..._messages, assistantToolMessage];
+        }
+      });
+      await _persist();
+
+      for (final toolCall in toolCalls) {
+        final execution = await widget.searchService.executeTool(
+          localDataState: widget.localDataState,
+          toolName: toolCall.name,
+          arguments: _decodeToolArguments(toolCall.arguments),
+          limit: maxTurns,
+        );
+        turnSources.addAll(execution.sources);
+        final toolMessage = MemoryMessage(
+          role: 'tool',
+          content: execution.content,
+          createdAt: DateTime.now(),
+          toolName: execution.toolName,
+          toolCallId: toolCall.id,
+          sources: execution.sources,
+        );
+        setState(() => _messages = [..._messages, toolMessage]);
+        await _persist();
+      }
+    }
+
+    return MemoryMessage(
+      role: 'ai',
+      content: '工具调用轮次已达到上限。请把问题缩小到具体日期、项目名或关键词后再试。',
+      createdAt: DateTime.now(),
+      sources: turnSources,
+    );
+  }
+
+  int _upsertStreamingMessage(
+    int visibleIndex, {
+    required String content,
+    required String reasoningContent,
+    required List<MemorySource> sources,
+  }) {
+    final message = MemoryMessage(
+      role: 'ai',
+      content: content,
+      reasoningContent: reasoningContent,
+      createdAt: DateTime.now(),
+      sources: sources,
+    );
+    if (visibleIndex >= 0 && visibleIndex < _messages.length) {
+      setState(() {
+        final updated = [..._messages];
+        updated[visibleIndex] = message;
+        _messages = updated;
+      });
+      return visibleIndex;
+    }
+    setState(() {
+      _messages = [..._messages, message];
+    });
+    return _messages.length - 1;
+  }
+
+  Map<String, Object?> _decodeToolArguments(String rawArguments) {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(rawArguments.isEmpty ? '{}' : rawArguments);
+    } on FormatException {
+      return {};
+    }
+    if (decoded is! Map) {
+      return {};
+    }
+    return decoded.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  Future<MemoryMessage> _fallbackLocalAnswer(String question) async {
+    final recall = await widget.searchService.recall(
+      localDataState: widget.localDataState,
+      question: question,
+      limit: widget.localDataState.config.memorySearchLimit.round(),
+    );
+    final toolMessages = recall.steps.map((step) => step.toMessage()).toList();
+    setState(() => _messages = [..._messages, ...toolMessages]);
+    await _persist();
+    return MemoryMessage(
+      role: 'ai',
+      content: _mockAnswer(question, recall),
+      createdAt: DateTime.now(),
+      sources: recall.sources,
+    );
+  }
+
+  Future<void> _persist() {
+    return widget.conversationService.saveMessages(
+      appDataDir: widget.localDataState.dataDirectory,
+      messages: _messages,
+    );
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) {
+        return;
+      }
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  String _mockAnswer(String question, MemoryRecallResult recall) {
+    if (recall.sources.isEmpty) {
+      return '## AI 回答\n\n我还没有在日报、周报或月报中检索到和「$question」直接相关的记录。你可以换一个更具体的关键词，例如项目名、模块名、问题现象或日期。';
+    }
+    final toolList = recall.steps
+        .map(
+          (step) =>
+              '- Thought：${step.thought}\n  Act：${step.tool.label}（${step.tool.query}）\n  Observation：${step.observation}',
+        )
+        .join('\n');
+    final sourceList = recall.sources
+        .take(3)
+        .map((source) => '- **${source.title}**：${source.snippet}')
+        .join('\n');
+    return '## 使用的工具\n\n$toolList\n\n## 找到的相关回忆\n\n$sourceList\n\n---\n\n## AI 回答\n\n当前未配置可用的回忆书模型，所以先基于本地工具检索给出摘要。上面这些记录可能和「$question」有关，你可以配置回忆书模型后获得更完整的解释、归纳和追问建议。';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,90 +364,839 @@ class MemoryPage extends StatelessWidget {
       color: Colors.white,
       child: Column(
         children: [
-          Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFFEEF2F7))),
-            ),
-            child: Row(
-              children: [
-                TextButton.icon(
-                  onPressed: null,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-                  label: const Text('记忆模型'),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: '开启新对话',
-                  onPressed: null,
-                  icon: const Icon(Icons.edit_square),
-                ),
-              ],
-            ),
+          _MemoryHeader(
+            thinkingEnabled: _thinkingEnabled,
+            reasoningEffort: _reasoningEffort,
+            onThinkingEnabledChanged: (value) =>
+                setState(() => _thinkingEnabled = value),
+            onReasoningEffortChanged: (value) =>
+                setState(() => _reasoningEffort = value),
+            onNewConversation: _newConversation,
           ),
           Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '准备好了，随时开始',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.w400),
+            child: _loading
+                ? const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    const SizedBox(height: 22),
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: AppTheme.border),
-                        borderRadius: BorderRadius.circular(28),
+                  )
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: _inChat ? _buildChatState() : _buildEntryState(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEntryState() {
+    return Center(
+      key: const ValueKey('memory-entry'),
+      child: Transform.translate(
+        offset: const Offset(0, -80),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '准备好了，随时开始',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 22),
+              _MemoryComposer(
+                controller: _entryController,
+                focusNode: _entryFocusNode,
+                hintText: '问问你的回忆...',
+                answering: _answering,
+                onSubmit: _sendFromEntry,
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _QuickPromptChip(
+                    icon: Icons.history_rounded,
+                    label: '查看今天日报',
+                    onTap: () => _send('查看今天的日报'),
+                  ),
+                  _QuickPromptChip(
+                    icon: Icons.auto_awesome_rounded,
+                    label: '查看本周日报',
+                    onTap: () => _send('查看本周的日报'),
+                  ),
+                  _QuickPromptChip(
+                    icon: Icons.calendar_month_rounded,
+                    label: '查看本月月报',
+                    onTap: () => _send('查看本月月报'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatState() {
+    final visibleMessages = _messages
+        .where(
+          (message) =>
+              message.role == 'user' ||
+              message.role == 'ai' ||
+              (message.role == 'assistant' &&
+                  (message.content.trim().isNotEmpty ||
+                      message.reasoningContent.trim().isNotEmpty ||
+                      message.toolCalls.isNotEmpty)),
+        )
+        .toList();
+
+    return Stack(
+      key: const ValueKey('memory-chat'),
+      children: [
+        ListView(
+          controller: _scrollController,
+          padding: const EdgeInsets.fromLTRB(32, 36, 32, 150),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 920),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final message in visibleMessages)
+                      _MemoryMessageView(
+                        message: message,
+                        attachments: _toolAttachmentsFor(message),
                       ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: null,
-                            icon: const Icon(Icons.add_rounded),
-                          ),
-                          Expanded(
-                            child: Text(
-                              '问问你的回忆...',
-                              style: Theme.of(context).textTheme.bodyLarge
+                    if (_answering)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 14, bottom: 22),
+                        child: Row(
+                          children: [
+                            const SizedBox(
+                              width: 13,
+                              height: 13,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.textSubtle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '正在思考并调用工具...',
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(color: AppTheme.textSubtle),
                             ),
-                          ),
-                          IconButton.filled(
-                            onPressed: null,
-                            style: IconButton.styleFrom(
-                              backgroundColor: AppTheme.text,
-                            ),
-                            icon: const Icon(
-                              Icons.arrow_upward_rounded,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '回忆书问答和 remember.json 将在第八阶段接入。',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      localDataState.dataDirectory,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSubtle,
-                      ),
-                    ),
                   ],
                 ),
               ),
             ),
+          ],
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Container(
+            height: 132,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x00FFFFFF), Colors.white, Colors.white],
+              ),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: _MemoryComposer(
+                  controller: _chatController,
+                  focusNode: _chatFocusNode,
+                  hintText: '继续追问你的回忆...',
+                  answering: _answering,
+                  onSubmit: _sendFromChat,
+                  multiline: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<_MemoryToolAttachment> _toolAttachmentsFor(MemoryMessage message) {
+    if (message.toolCalls.isEmpty) {
+      return const [];
+    }
+    final toolMessages = {
+      for (final item in _messages)
+        if (item.role == 'tool' && item.toolCallId != null)
+          item.toolCallId!: item,
+    };
+    return message.toolCalls
+        .map(
+          (toolCall) => _MemoryToolAttachment(
+            toolCall: toolCall,
+            resultMessage: toolMessages[toolCall.id],
+          ),
+        )
+        .toList();
+  }
+}
+
+class _MemoryHeader extends StatelessWidget {
+  const _MemoryHeader({
+    required this.thinkingEnabled,
+    required this.reasoningEffort,
+    required this.onThinkingEnabledChanged,
+    required this.onReasoningEffortChanged,
+    required this.onNewConversation,
+  });
+
+  final bool thinkingEnabled;
+  final String reasoningEffort;
+  final ValueChanged<bool> onThinkingEnabledChanged;
+  final ValueChanged<String> onReasoningEffortChanged;
+  final VoidCallback onNewConversation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFEEF2F7))),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '回忆书',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppTheme.text,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          _ThinkingControl(
+            enabled: thinkingEnabled,
+            effort: reasoningEffort,
+            onEnabledChanged: onThinkingEnabledChanged,
+            onEffortChanged: onReasoningEffortChanged,
+          ),
+          const SizedBox(width: 12),
+          IconButton(
+            tooltip: '开启新对话',
+            onPressed: onNewConversation,
+            icon: const Icon(Icons.edit_square, size: 17),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemoryComposer extends StatelessWidget {
+  const _MemoryComposer({
+    required this.controller,
+    required this.focusNode,
+    required this.hintText,
+    required this.answering,
+    required this.onSubmit,
+    this.multiline = false,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final String hintText;
+  final bool answering;
+  final VoidCallback onSubmit;
+  final bool multiline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 52),
+      padding: const EdgeInsets.fromLTRB(7, 5, 8, 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A0F172A),
+            blurRadius: 28,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: null,
+            icon: const Icon(Icons.add_rounded),
+            color: AppTheme.text,
+            disabledColor: AppTheme.text,
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: !answering,
+              minLines: 1,
+              maxLines: multiline ? 3 : 1,
+              textInputAction: multiline
+                  ? TextInputAction.newline
+                  : TextInputAction.send,
+              onSubmitted: multiline ? null : (_) => onSubmit(),
+              decoration: InputDecoration(
+                hintText: hintText,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                isDense: true,
+              ),
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+          IconButton.filled(
+            onPressed: answering ? null : onSubmit,
+            style: IconButton.styleFrom(
+              backgroundColor: AppTheme.text,
+              disabledBackgroundColor: const Color(0xFFE2E8F0),
+            ),
+            icon: answering
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.textSubtle,
+                    ),
+                  )
+                : const Icon(Icons.arrow_upward_rounded, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickPromptChip extends StatelessWidget {
+  const _QuickPromptChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 15, color: AppTheme.textSubtle),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppTheme.textMuted,
+        side: const BorderSide(color: AppTheme.border),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        minimumSize: const Size(0, 36),
+        textStyle: Theme.of(context).textTheme.bodyMedium,
+      ),
+    );
+  }
+}
+
+class _ThinkingControl extends StatelessWidget {
+  const _ThinkingControl({
+    required this.enabled,
+    required this.effort,
+    required this.onEnabledChanged,
+    required this.onEffortChanged,
+  });
+
+  final bool enabled;
+  final String effort;
+  final ValueChanged<bool> onEnabledChanged;
+  final ValueChanged<String> onEffortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '思考',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSubtle),
+        ),
+        const SizedBox(width: 6),
+        Switch.adaptive(
+          value: enabled,
+          onChanged: onEnabledChanged,
+          activeThumbColor: AppTheme.text,
+        ),
+        const SizedBox(width: 8),
+        AnimatedOpacity(
+          opacity: enabled ? 1 : 0.42,
+          duration: const Duration(milliseconds: 160),
+          child: IgnorePointer(
+            ignoring: !enabled,
+            child: Container(
+              height: 30,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _EffortPill(
+                    label: 'High',
+                    selected: effort == 'high',
+                    onTap: () => onEffortChanged('high'),
+                  ),
+                  _EffortPill(
+                    label: 'Max',
+                    selected: effort == 'max',
+                    onTap: () => onEffortChanged('max'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EffortPill extends StatelessWidget {
+  const _EffortPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: selected ? AppTheme.text : AppTheme.textSubtle,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MemoryMessageView extends StatelessWidget {
+  const _MemoryMessageView({required this.message, required this.attachments});
+
+  final MemoryMessage message;
+  final List<_MemoryToolAttachment> attachments;
+
+  @override
+  Widget build(BuildContext context) {
+    if (message.role == 'user') {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 680),
+          margin: const EdgeInsets.only(bottom: 28),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Text(
+            message.content,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppTheme.text, height: 1.7),
+          ),
+        ),
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 820),
+        margin: const EdgeInsets.only(bottom: 36),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (message.reasoningContent.trim().isNotEmpty) ...[
+              _ReasoningBlock(
+                reasoning: message.reasoningContent,
+                collapsed: message.content.trim().isNotEmpty,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (message.content.trim().isNotEmpty)
+              GptMarkdown(
+                message.content,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textMuted,
+                  height: 1.8,
+                ),
+              ),
+            if (attachments.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _ToolAttachmentStrip(attachments: attachments),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MemoryToolAttachment {
+  const _MemoryToolAttachment({
+    required this.toolCall,
+    required this.resultMessage,
+  });
+
+  final MemoryToolCallMessage toolCall;
+  final MemoryMessage? resultMessage;
+}
+
+class _ToolAttachmentStrip extends StatelessWidget {
+  const _ToolAttachmentStrip({required this.attachments});
+
+  final List<_MemoryToolAttachment> attachments;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final attachment in attachments)
+          _ToolAttachmentChip(attachment: attachment),
+      ],
+    );
+  }
+}
+
+class _ToolAttachmentChip extends StatelessWidget {
+  const _ToolAttachmentChip({required this.attachment});
+
+  final _MemoryToolAttachment attachment;
+
+  @override
+  Widget build(BuildContext context) {
+    final resultCount = attachment.resultMessage?.sources.length ?? 0;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => _showToolDialog(context, attachment),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 14,
+                  color: Color(0xFF10B981),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _toolLabel(attachment.toolCall.name),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.text,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                resultCount == 0 ? '无结果' : '$resultCount 条结果',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.textSubtle),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showToolDialog(BuildContext context, _MemoryToolAttachment attachment) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 680),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.build_circle_outlined,
+                      size: 20,
+                      color: AppTheme.text,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _toolLabel(attachment.toolCall.name),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppTheme.text,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ToolDetailBlock(
+                          title: '工具名称',
+                          content: attachment.toolCall.name,
+                        ),
+                        _ToolDetailBlock(
+                          title: '传入参数',
+                          content: _prettyJson(attachment.toolCall.arguments),
+                        ),
+                        _ToolDetailBlock(
+                          title: '返回结果',
+                          content: _prettyJson(
+                            attachment.resultMessage?.content ?? '暂无返回结果',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _prettyJson(String raw) {
+    try {
+      const encoder = JsonEncoder.withIndent('  ');
+      return encoder.convert(jsonDecode(raw));
+    } on FormatException {
+      return raw;
+    }
+  }
+
+  String _toolLabel(String name) {
+    return switch (name) {
+      'get_current_date' => '获取当前日期',
+      'keyword_search' => '关键词搜索',
+      'read_daily_note' => '读取日报',
+      'read_week_daily_notes' => '读取周内日报',
+      'read_month_report' => '读取月报',
+      _ => name,
+    };
+  }
+}
+
+class _ToolDetailBlock extends StatelessWidget {
+  const _ToolDetailBlock({required this.title, required this.content});
+
+  final String title;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppTheme.textSubtle,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: SelectableText(
+              content,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textMuted,
+                height: 1.55,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReasoningBlock extends StatefulWidget {
+  const _ReasoningBlock({required this.reasoning, required this.collapsed});
+
+  final String reasoning;
+  final bool collapsed;
+
+  @override
+  State<_ReasoningBlock> createState() => _ReasoningBlockState();
+}
+
+class _ReasoningBlockState extends State<_ReasoningBlock> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = !widget.collapsed;
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReasoningBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.collapsed && widget.collapsed) {
+      _expanded = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.psychology_alt_outlined,
+                  size: 15,
+                  color: AppTheme.textSubtle,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '思考过程',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppTheme.textSubtle,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: AppTheme.textSubtle,
+                ),
+              ],
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                widget.reasoning.trim(),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textSubtle,
+                  height: 1.65,
+                ),
+              ),
+            ),
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 160),
           ),
         ],
       ),

@@ -376,6 +376,13 @@ class _PreferencesPanel extends StatelessWidget {
               onChanged: (value) =>
                   onChanged(config.copyWith(showDesktopWidget: value)),
             ),
+            _NumberSettingRow(
+              label: '回忆书单轮最大搜索次数',
+              value: config.memorySearchLimit,
+              suffix: '次',
+              onChanged: (value) =>
+                  onChanged(config.copyWith(memorySearchLimit: value)),
+            ),
           ],
         ),
         Text(

@@ -1,6 +1,7 @@
 import '../../src/rust/ai.dart' as rust_ai;
 import '../../src/rust/api/ai_api.dart' as rust_api;
 import '../models/app_config.dart';
+import '../models/memory_message.dart';
 import '../models/model_config.dart';
 import '../models/provider_config.dart';
 import '../models/structured_work_note.dart';
@@ -138,6 +139,102 @@ class AiClientService {
     return response.content;
   }
 
+  Future<String?> memoryChat({
+    required String appDataDir,
+    required AppConfig config,
+    required String question,
+    required String contextMarkdown,
+  }) async {
+    final selection = _selectModel(config, 'memoryBookModel');
+    if (selection == null) {
+      return null;
+    }
+
+    final response = await rust_api.memoryChat(
+      request: rust_ai.MemoryChatRequest(
+        appDataDir: appDataDir,
+        provider: _toRustProvider(selection.provider),
+        model: _toRustModel(selection.model),
+        question: question,
+        contextMarkdown: contextMarkdown,
+        apiLogEnabled: config.apiLogEnabled,
+      ),
+    );
+
+    if (!response.ok || response.content.trim().isEmpty) {
+      return null;
+    }
+
+    return response.content.trim();
+  }
+
+  Future<rust_ai.MemoryToolChatResult?> memoryToolChat({
+    required String appDataDir,
+    required AppConfig config,
+    required List<MemoryMessage> messages,
+    bool thinkingEnabled = true,
+    String reasoningEffort = 'high',
+  }) async {
+    final selection = _selectModel(config, 'memoryBookModel');
+    if (selection == null) {
+      return null;
+    }
+
+    final response = await rust_api.memoryToolChat(
+      request: rust_ai.MemoryToolChatRequest(
+        appDataDir: appDataDir,
+        provider: _toRustProvider(selection.provider),
+        model: _toRustModel(selection.model),
+        messages: messages.map(_toRustChatMessage).toList(),
+        thinkingEnabled: thinkingEnabled,
+        reasoningEffort: reasoningEffort,
+        apiLogEnabled: config.apiLogEnabled,
+      ),
+    );
+
+    return response.ok ? response : null;
+  }
+
+  Stream<rust_ai.MemoryToolChatStreamEvent>? memoryToolChatStream({
+    required String appDataDir,
+    required AppConfig config,
+    required List<MemoryMessage> messages,
+    required bool thinkingEnabled,
+    required String reasoningEffort,
+  }) {
+    final selection = _selectModel(config, 'memoryBookModel');
+    if (selection == null) {
+      return null;
+    }
+
+    return rust_api.memoryToolChatStream(
+      request: rust_ai.MemoryToolChatRequest(
+        appDataDir: appDataDir,
+        provider: _toRustProvider(selection.provider),
+        model: _toRustModel(selection.model),
+        messages: messages.map(_toRustChatMessage).toList(),
+        thinkingEnabled: thinkingEnabled,
+        reasoningEffort: reasoningEffort,
+        apiLogEnabled: config.apiLogEnabled,
+      ),
+    );
+  }
+
+  String memoryModelLabel(AppConfig config) {
+    final modelId = config.defaultModels['memoryBookModel'];
+    if (modelId == null || modelId.trim().isEmpty) {
+      return '记忆模型未选择';
+    }
+    for (final provider in config.providers) {
+      for (final model in provider.models) {
+        if (model.modelId == modelId) {
+          return model.displayName;
+        }
+      }
+    }
+    return modelId;
+  }
+
   String? fimUnavailableReason(AppConfig config) {
     final modelId = config.defaultModels['editCompletionModel'];
     if (modelId == null || modelId.trim().isEmpty) {
@@ -210,6 +307,24 @@ class AiClientService {
     return rust_ai.AiModel(
       modelId: model.modelId,
       displayName: model.displayName,
+    );
+  }
+
+  rust_ai.AiChatMessage _toRustChatMessage(MemoryMessage message) {
+    return rust_ai.AiChatMessage(
+      role: message.role == 'ai' ? 'assistant' : message.role,
+      content: message.content,
+      reasoningContent: message.reasoningContent,
+      toolCallId: message.toolCallId ?? '',
+      toolCalls: message.toolCalls
+          .map(
+            (toolCall) => rust_ai.AiToolCall(
+              id: toolCall.id,
+              name: toolCall.name,
+              arguments: toolCall.arguments,
+            ),
+          )
+          .toList(),
     );
   }
 

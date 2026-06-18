@@ -1,13 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../features/home/home_page.dart';
 import '../../features/memory/memory_page.dart';
 import '../../features/notes/notes_page.dart';
 import '../../features/settings/settings_page.dart';
+import '../../features/widget/desktop_status_widget.dart';
 import '../models/local_data_state.dart';
-import '../services/stats_service.dart';
+import '../services/desktop_widget_controller.dart';
 import '../theme/app_theme.dart';
 
 enum AppSection { home, notes, memory, settings }
@@ -22,82 +21,76 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  static const _workTick = Duration(minutes: 1);
-
   AppSection _section = AppSection.home;
   late LocalDataState _localDataState = widget.localDataState;
-  final StatsService _statsService = const StatsService();
-  Timer? _workTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _startWorkTimer();
-  }
+  late final DesktopWidgetController _desktopWidgetController =
+      DesktopWidgetController()..attach(_localDataState);
 
   @override
   void didUpdateWidget(covariant AppShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.localDataState != oldWidget.localDataState) {
       _localDataState = widget.localDataState;
+      _desktopWidgetController.attach(_localDataState);
     }
   }
 
   @override
   void dispose() {
-    _workTimer?.cancel();
+    _desktopWidgetController.dispose();
     super.dispose();
-  }
-
-  void _startWorkTimer() {
-    _workTimer = Timer.periodic(_workTick, (_) => _recordWorkTick());
-  }
-
-  Future<void> _recordWorkTick() async {
-    final workHours = _localDataState.config.dailyWorkHours;
-    final secondsPerDay = (workHours <= 0 ? 8 : workHours) * 3600;
-    final coins =
-        _localDataState.config.dailySalary *
-        _workTick.inSeconds /
-        secondsPerDay;
-    await _statsService.recordWorkTime(
-      appDataDir: _localDataState.dataDirectory,
-      workSeconds: _workTick.inSeconds,
-      coins: coins,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
+      body: Stack(
         children: [
-          GlobalSidebar(
-            selectedSection: _section,
-            onSectionSelected: (section) => setState(() => _section = section),
-          ),
-          Expanded(
-            child: KeyedSubtree(
-              key: ValueKey(_section),
-              child: switch (_section) {
-                AppSection.home => HomePage(localDataState: _localDataState),
-                AppSection.notes => NotesPage(localDataState: _localDataState),
-                AppSection.memory => MemoryPage(
-                  localDataState: _localDataState,
-                ),
-                AppSection.settings => SettingsPage(
-                  localDataState: _localDataState,
-                  onConfigChanged: (config) {
-                    setState(() {
-                      _localDataState = _localDataState.copyWith(
-                        config: config,
-                      );
-                    });
+          Row(
+            children: [
+              GlobalSidebar(
+                selectedSection: _section,
+                onSectionSelected: (section) =>
+                    setState(() => _section = section),
+              ),
+              Expanded(
+                child: KeyedSubtree(
+                  key: ValueKey(_section),
+                  child: switch (_section) {
+                    AppSection.home => HomePage(
+                      localDataState: _localDataState,
+                    ),
+                    AppSection.notes => NotesPage(
+                      localDataState: _localDataState,
+                    ),
+                    AppSection.memory => MemoryPage(
+                      localDataState: _localDataState,
+                    ),
+                    AppSection.settings => SettingsPage(
+                      localDataState: _localDataState,
+                      onConfigChanged: (config) {
+                        setState(() {
+                          _localDataState = _localDataState.copyWith(
+                            config: config,
+                          );
+                          _desktopWidgetController.attach(_localDataState);
+                        });
+                      },
+                    ),
                   },
                 ),
-              },
-            ),
+              ),
+            ],
           ),
+          if (_localDataState.config.showDesktopWidget)
+            Positioned(
+              right: 26,
+              bottom: 24,
+              child: DesktopStatusWidget(
+                controller: _desktopWidgetController,
+                onOpenHome: () => setState(() => _section = AppSection.home),
+              ),
+            ),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+use crate::frb_generated::StreamSink;
 use crate::{ai_claude, ai_gemini, ai_openai, stats};
 use serde_json::Value;
 
@@ -26,6 +27,22 @@ pub struct AiChatRequest {
     pub user_prompt: String,
     pub purpose: String,
     pub api_log_enabled: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct AiChatMessage {
+    pub role: String,
+    pub content: String,
+    pub reasoning_content: String,
+    pub tool_call_id: String,
+    pub tool_calls: Vec<AiToolCall>,
+}
+
+#[derive(Clone, Debug)]
+pub struct AiToolCall {
+    pub id: String,
+    pub name: String,
+    pub arguments: String,
 }
 
 #[derive(Clone, Debug)]
@@ -72,6 +89,17 @@ pub struct MemoryChatRequest {
 }
 
 #[derive(Clone, Debug)]
+pub struct MemoryToolChatRequest {
+    pub app_data_dir: String,
+    pub provider: AiProvider,
+    pub model: AiModel,
+    pub messages: Vec<AiChatMessage>,
+    pub thinking_enabled: bool,
+    pub reasoning_effort: String,
+    pub api_log_enabled: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct FimCompleteRequest {
     pub app_data_dir: String,
     pub provider: AiProvider,
@@ -92,6 +120,36 @@ pub struct AiTextResult {
     pub cached_tokens: i32,
     pub provider_name: String,
     pub model_id: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct MemoryToolChatResult {
+    pub ok: bool,
+    pub content: String,
+    pub reasoning_content: String,
+    pub tool_calls: Vec<AiToolCall>,
+    pub error_code: String,
+    pub error_message: String,
+    pub input_tokens: i32,
+    pub output_tokens: i32,
+    pub cached_tokens: i32,
+    pub provider_name: String,
+    pub model_id: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct MemoryToolChatStreamEvent {
+    pub event_type: String,
+    pub content_delta: String,
+    pub reasoning_delta: String,
+    pub content: String,
+    pub reasoning_content: String,
+    pub tool_calls: Vec<AiToolCall>,
+    pub error_code: String,
+    pub error_message: String,
+    pub input_tokens: i32,
+    pub output_tokens: i32,
+    pub cached_tokens: i32,
 }
 
 #[derive(Clone, Debug)]
@@ -317,6 +375,102 @@ pub async fn memory_chat(request: MemoryChatRequest) -> AiTextResult {
     .await
 }
 
+pub async fn memory_tool_chat(request: MemoryToolChatRequest) -> MemoryToolChatResult {
+    let chat_request = AiChatRequest {
+        app_data_dir: request.app_data_dir.clone(),
+        provider: request.provider.clone(),
+        model: request.model.clone(),
+        system_prompt: MEMORY_TOOL_SYSTEM_PROMPT.to_string(),
+        user_prompt: request
+            .messages
+            .iter()
+            .map(|message| message.content.as_str())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        purpose: "memory_tool_chat".to_string(),
+        api_log_enabled: request.api_log_enabled,
+    };
+
+    if request.provider.api_key.trim().is_empty() {
+        return MemoryToolChatResult::error(
+            &chat_request,
+            "missing_api_key",
+            "供应商 API Key 为空，已保留 mock 流程。",
+            0,
+            0,
+            0,
+        );
+    }
+
+    if request.provider.protocol != "openaiCompatible" {
+        return MemoryToolChatResult::error(
+            &chat_request,
+            "unsupported_tool_protocol",
+            "回忆书工具调用目前仅支持 OpenAI-compatible Chat Completions。",
+            0,
+            0,
+            0,
+        );
+    }
+
+    let response = ai_openai::memory_tool_chat(&request, MEMORY_TOOL_SYSTEM_PROMPT).await;
+    let result = match response {
+        Ok(result) => result,
+        Err(error) => MemoryToolChatResult::error(&chat_request, "request_failed", &error, 0, 0, 0),
+    };
+
+    let text_result = AiTextResult {
+        ok: result.ok,
+        content: result.content.clone(),
+        error_code: result.error_code.clone(),
+        error_message: result.error_message.clone(),
+        input_tokens: result.input_tokens,
+        output_tokens: result.output_tokens,
+        cached_tokens: result.cached_tokens,
+        provider_name: result.provider_name.clone(),
+        model_id: result.model_id.clone(),
+    };
+    let _ = stats::record_model_call(&request.app_data_dir, &chat_request, &text_result);
+    result
+}
+
+pub async fn memory_tool_chat_stream(
+    request: MemoryToolChatRequest,
+    sink: StreamSink<MemoryToolChatStreamEvent>,
+) {
+    let chat_request = AiChatRequest {
+        app_data_dir: request.app_data_dir.clone(),
+        provider: request.provider.clone(),
+        model: request.model.clone(),
+        system_prompt: MEMORY_TOOL_SYSTEM_PROMPT.to_string(),
+        user_prompt: request
+            .messages
+            .iter()
+            .map(|message| message.content.as_str())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        purpose: "memory_tool_chat_stream".to_string(),
+        api_log_enabled: request.api_log_enabled,
+    };
+
+    if request.provider.protocol != "openaiCompatible" {
+        let _ = sink.add(MemoryToolChatStreamEvent::error(
+            "unsupported_tool_protocol",
+            "回忆书流式工具调用目前仅支持 OpenAI-compatible Chat Completions。",
+        ));
+        return;
+    }
+
+    if let Err(error) =
+        ai_openai::memory_tool_chat_stream(request.clone(), MEMORY_TOOL_SYSTEM_PROMPT, sink.clone())
+            .await
+    {
+        let _ = sink.add(MemoryToolChatStreamEvent::error("request_failed", &error));
+        let result = AiTextResult::error(&chat_request, "request_failed", &error, 0, 0, 0);
+        let _ = stats::record_model_call(&request.app_data_dir, &chat_request, &result);
+    }
+}
+
 pub async fn fim_complete(request: FimCompleteRequest) -> AiTextResult {
     let chat_request = AiChatRequest {
         app_data_dir: request.app_data_dir.clone(),
@@ -437,10 +591,9 @@ fn report_user_prompt(period_label: &str, source_markdown: &str) -> String {
     )
 }
 
-fn memory_chat_user_prompt(question: &str, context_markdown: &str) -> String {
+fn memory_chat_user_prompt(_question: &str, context_markdown: &str) -> String {
     format!(
-        "用户问题：\n{}\n\n可参考的历史 Markdown：\n{}",
-        question.trim(),
+        "请根据下面的完整上下文回答最后一条 User 消息。上下文按时间顺序组织，后续请求会只在末尾追加新消息以利于供应商 KV/cache 命中。\n\n上下文材料：\n{}",
         context_markdown.trim()
     )
 }
@@ -548,6 +701,73 @@ impl AiTextResult {
     }
 }
 
+impl MemoryToolChatResult {
+    pub fn success(
+        request: &MemoryToolChatRequest,
+        content: impl Into<String>,
+        reasoning_content: impl Into<String>,
+        tool_calls: Vec<AiToolCall>,
+        input_tokens: i32,
+        output_tokens: i32,
+        cached_tokens: i32,
+    ) -> Self {
+        Self {
+            ok: true,
+            content: content.into(),
+            reasoning_content: reasoning_content.into(),
+            tool_calls,
+            error_code: String::new(),
+            error_message: String::new(),
+            input_tokens,
+            output_tokens,
+            cached_tokens,
+            provider_name: request.provider.name.clone(),
+            model_id: request.model.model_id.clone(),
+        }
+    }
+
+    pub fn error(
+        request: &AiChatRequest,
+        code: impl Into<String>,
+        message: impl Into<String>,
+        input_tokens: i32,
+        output_tokens: i32,
+        cached_tokens: i32,
+    ) -> Self {
+        Self {
+            ok: false,
+            content: String::new(),
+            reasoning_content: String::new(),
+            tool_calls: vec![],
+            error_code: code.into(),
+            error_message: message.into(),
+            input_tokens,
+            output_tokens,
+            cached_tokens,
+            provider_name: request.provider.name.clone(),
+            model_id: request.model.model_id.clone(),
+        }
+    }
+}
+
+impl MemoryToolChatStreamEvent {
+    pub fn error(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            event_type: "error".to_string(),
+            content_delta: String::new(),
+            reasoning_delta: String::new(),
+            content: String::new(),
+            reasoning_content: String::new(),
+            tool_calls: vec![],
+            error_code: code.into(),
+            error_message: message.into(),
+            input_tokens: 0,
+            output_tokens: 0,
+            cached_tokens: 0,
+        }
+    }
+}
+
 const STRUCTURED_SYSTEM_PROMPT: &str = r#"你是 SpringNote 的日报结构化助手。请把用户的中文工作记录整理成 JSON，不要输出 Markdown，不要解释。
 JSON 格式必须是：
 {"completed":["完成事项"],"issues":["问题记录"],"plans":["明日计划"]}
@@ -580,8 +800,16 @@ const MONTHLY_REPORT_SYSTEM_PROMPT: &str = r#"你是 SpringNote 的月报整理�
 5. 语气克制、真诚、有人的表达，不要过度包装，也不要像 AI 汇报模板。
 6. 只输出最终 Markdown，不要解释。"#;
 
-const MEMORY_CHAT_SYSTEM_PROMPT: &str = r#"你是 SpringNote 的回忆书问答助手。请只基于提供的历史 Markdown 回答用户问题。
+const MEMORY_CHAT_SYSTEM_PROMPT: &str = r#"你是 SpringNote 的回忆书问答助手。请只基于提供的上下文材料回答用户问题。
+上下文可能包含完整对话历史、历史 Markdown、ReAct 工具执行轨迹和工具观察结果。
+回答连续追问时，要结合完整对话历史理解省略指代，例如“什么时候”“这个配置”“刚才说的”等。
 如果材料不足，请明确说明缺少依据。不要编造事实。"#;
+
+const MEMORY_TOOL_SYSTEM_PROMPT: &str = r#"你是 SpringNote 的回忆书问答助手。你必须基于用户的历史日报、周报、月报回答问题。
+你可以自主调用工具检索或读取记录；需要信息时先调用工具，不要让应用预先替你检索。
+连续追问时结合完整消息历史理解省略指代，例如“什么时候”“这个配置”“刚才说的”等。
+回答必须只依据工具返回和对话上下文；材料不足时明确说明缺少依据，不要编造事实。
+最终回答使用自然中文和清晰 Markdown，不要输出工具调用 JSON。"#;
 
 #[cfg(test)]
 mod tests {
@@ -650,5 +878,18 @@ mod tests {
         assert!(prompt.contains("- A"));
         assert!(prompt.contains("- 暂无"));
         assert!(prompt.contains("- B"));
+    }
+
+    #[test]
+    fn builds_memory_chat_prompt_with_context() {
+        let prompt = memory_chat_user_prompt(
+            "什么时候删除 nacos 配置？",
+            "## 当前对话历史\nUser: nacos 是在哪天配置的\n\n## ReAct 工具执行轨迹\nThought: search\nAct: keyword_search(keywords=[nacos])\nObservation: hit",
+        );
+
+        assert!(prompt.starts_with("请根据下面的完整上下文回答最后一条 User 消息"));
+        assert!(prompt.contains("当前对话历史"));
+        assert!(prompt.contains("ReAct 工具执行轨迹"));
+        assert!(prompt.contains("keyword_search"));
     }
 }

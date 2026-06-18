@@ -10,6 +10,7 @@ class AppConfig {
     required this.autoStart,
     required this.showUpdates,
     required this.showDesktopWidget,
+    required this.memorySearchLimit,
     required this.apiLogEnabled,
     required this.providers,
     required this.defaultModels,
@@ -24,6 +25,7 @@ class AppConfig {
   final bool autoStart;
   final bool showUpdates;
   final bool showDesktopWidget;
+  final double memorySearchLimit;
   final bool apiLogEnabled;
   final List<ProviderConfig> providers;
   final Map<String, String?> defaultModels;
@@ -39,6 +41,7 @@ class AppConfig {
       autoStart: false,
       showUpdates: true,
       showDesktopWidget: true,
+      memorySearchLimit: 3,
       apiLogEnabled: false,
       providers: [],
       defaultModels: {
@@ -60,6 +63,7 @@ class AppConfig {
       autoStart: json['autoStart'] as bool? ?? false,
       showUpdates: json['showUpdates'] as bool? ?? true,
       showDesktopWidget: json['showDesktopWidget'] as bool? ?? true,
+      memorySearchLimit: _readDouble(json['memorySearchLimit'], 3),
       apiLogEnabled: json['apiLogEnabled'] as bool? ?? false,
       providers: _readProviders(json['providers']),
       defaultModels: _readStringMap(
@@ -80,6 +84,7 @@ class AppConfig {
       'autoStart': autoStart,
       'showUpdates': showUpdates,
       'showDesktopWidget': showDesktopWidget,
+      'memorySearchLimit': memorySearchLimit,
       'apiLogEnabled': apiLogEnabled,
       'providers': providers.map((provider) => provider.toJson()).toList(),
       'defaultModels': defaultModels,
@@ -96,6 +101,7 @@ class AppConfig {
     bool? autoStart,
     bool? showUpdates,
     bool? showDesktopWidget,
+    double? memorySearchLimit,
     bool? apiLogEnabled,
     List<ProviderConfig>? providers,
     Map<String, String?>? defaultModels,
@@ -110,6 +116,7 @@ class AppConfig {
       autoStart: autoStart ?? this.autoStart,
       showUpdates: showUpdates ?? this.showUpdates,
       showDesktopWidget: showDesktopWidget ?? this.showDesktopWidget,
+      memorySearchLimit: memorySearchLimit ?? this.memorySearchLimit,
       apiLogEnabled: apiLogEnabled ?? this.apiLogEnabled,
       providers: providers ?? this.providers,
       defaultModels: defaultModels ?? this.defaultModels,
