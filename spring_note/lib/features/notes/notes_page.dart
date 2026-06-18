@@ -449,9 +449,11 @@ class _EditorPane extends StatelessWidget {
           hintText: '# 开始编辑 Markdown...',
           filled: true,
           fillColor: Colors.white,
+          hoverColor: Colors.white,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
+          disabledBorder: InputBorder.none,
           contentPadding: EdgeInsets.fromLTRB(26, 24, 26, 24),
         ),
         style: const TextStyle(
