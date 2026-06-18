@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/local_data_state.dart';
 import '../../core/models/structured_work_note.dart';
+import '../../core/services/ai_client_service.dart';
 import '../../core/services/daily_note_service.dart';
+import '../../core/services/home_overview_service.dart';
 import '../../core/services/mock_ai_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/page_scaffold.dart';
@@ -13,11 +15,15 @@ class HomePage extends StatefulWidget {
     required this.localDataState,
     this.mockAiService = const MockAiService(),
     this.dailyNoteService = const DailyNoteService(),
+    this.homeOverviewService = const HomeOverviewService(),
+    this.aiClientService = const AiClientService(),
   });
 
   final LocalDataState localDataState;
   final MockAiService mockAiService;
   final DailyNoteService dailyNoteService;
+  final HomeOverviewService homeOverviewService;
+  final AiClientService aiClientService;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -35,12 +41,43 @@ class _HomePageState extends State<HomePage> {
   );
   bool _isSubmitting = false;
   String? _lastSavedPath;
+  String? _aiNotice;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodayOverview();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.localDataState.dataDirectory !=
+        oldWidget.localDataState.dataDirectory) {
+      _loadTodayOverview();
+    }
+  }
 
   @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadTodayOverview() async {
+    try {
+      final overview = await widget.homeOverviewService.readOverview(
+        appDataDir: widget.localDataState.dataDirectory,
+        date: DateTime.now(),
+      );
+      if (mounted) {
+        setState(() => _overview = overview);
+      }
+    } catch (_) {
+      // Overview JSON is a UI cache; malformed or unavailable files should not
+      // block daily note writing.
+    }
   }
 
   Future<void> _submit() async {
@@ -52,20 +89,74 @@ class _HomePageState extends State<HomePage> {
     setState(() => _isSubmitting = true);
 
     try {
-      final structured = widget.mockAiService.structureWorkNote(input);
+      final now = DateTime.now();
+      final configuredModel = widget
+          .localDataState
+          .config
+          .defaultModels['intelligentGenerationModel'];
+      final hasConfiguredModel =
+          configuredModel != null && configuredModel.trim().isNotEmpty;
+      var aiFailed = false;
+
+      StructuredWorkNote? aiStructured;
+      try {
+        aiStructured = await widget.aiClientService.generateStructuredNote(
+          appDataDir: widget.localDataState.dataDirectory,
+          config: widget.localDataState.config,
+          input: input,
+        );
+      } catch (_) {
+        aiFailed = true;
+      }
+      final structured =
+          aiStructured ?? widget.mockAiService.structureWorkNote(input);
+
+      String? aiMergedMarkdown;
+      try {
+        final existingMarkdown = await widget.dailyNoteService
+            .readDailyMarkdown(
+              dailyNotesDirectory: widget.localDataState.dailyNotesDirectory,
+              date: now,
+            );
+        aiMergedMarkdown = await widget.aiClientService.mergeDailyMarkdown(
+          appDataDir: widget.localDataState.dataDirectory,
+          config: widget.localDataState.config,
+          existingMarkdown: existingMarkdown,
+          note: structured,
+          date: now,
+        );
+      } catch (_) {
+        aiFailed = true;
+      }
+
       final savedPath = await widget.dailyNoteService.mergeStructuredNote(
         dailyNotesDirectory: widget.localDataState.dailyNotesDirectory,
-        date: DateTime.now(),
+        date: now,
         note: structured,
+        mergedMarkdown: aiMergedMarkdown,
       );
+      StructuredWorkNote nextOverview;
+      try {
+        nextOverview = await widget.homeOverviewService.mergeAndSaveOverview(
+          appDataDir: widget.localDataState.dataDirectory,
+          date: now,
+          current: _overview,
+          incoming: structured,
+        );
+      } catch (_) {
+        nextOverview = _mergeOverview(_overview, structured);
+      }
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _overview = _mergeOverview(_overview, structured);
+        _overview = nextOverview;
         _lastSavedPath = savedPath;
+        _aiNotice = aiFailed || !hasConfiguredModel || aiMergedMarkdown == null
+            ? '未配置可用模型或 AI 返回不可用，本次已使用本地 mock / 简单合并。'
+            : null;
         _controller.clear();
       });
       _focusNode.requestFocus();
@@ -115,6 +206,10 @@ class _HomePageState extends State<HomePage> {
           if (_lastSavedPath != null) ...[
             const SizedBox(height: 16),
             _SavedPathBanner(path: _lastSavedPath!),
+          ],
+          if (_aiNotice != null) ...[
+            const SizedBox(height: 12),
+            _AiNoticeBanner(message: _aiNotice!),
           ],
         ],
       ),
@@ -683,6 +778,42 @@ class _SavedPathBanner extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF047857)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiNoticeBanner extends StatelessWidget {
+  const _AiNoticeBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: Color(0xFFD97706),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF92400E)),
             ),
           ),
         ],

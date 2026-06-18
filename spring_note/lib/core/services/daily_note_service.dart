@@ -12,12 +12,20 @@ class DailyNoteService {
     required String dailyNotesDirectory,
     required DateTime date,
     required StructuredWorkNote note,
+    String? mergedMarkdown,
   }) async {
     final path = dailyNotePath(dailyNotesDirectory, date);
     final existing = await noteService.readMarkdown(path);
-    final merged = _mergeMarkdown(existing, date, note);
+    final merged = mergedMarkdown ?? _mergeMarkdown(existing, date, note);
     await noteService.writeMarkdown(path, merged);
     return path;
+  }
+
+  Future<String> readDailyMarkdown({
+    required String dailyNotesDirectory,
+    required DateTime date,
+  }) {
+    return noteService.readMarkdown(dailyNotePath(dailyNotesDirectory, date));
   }
 
   String dailyNotePath(String dailyNotesDirectory, DateTime date) {

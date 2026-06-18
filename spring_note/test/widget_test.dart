@@ -7,6 +7,7 @@ import 'package:spring_note/core/models/local_data_state.dart';
 import 'package:spring_note/core/models/structured_work_note.dart';
 import 'package:spring_note/core/router/app_shell.dart';
 import 'package:spring_note/core/services/daily_note_service.dart';
+import 'package:spring_note/core/services/home_overview_service.dart';
 import 'package:spring_note/core/services/local_data_service.dart';
 import 'package:spring_note/core/theme/app_theme.dart';
 import 'package:spring_note/features/home/home_page.dart';
@@ -60,6 +61,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final fakeDailyNoteService = _FakeDailyNoteService();
+    final fakeHomeOverviewService = _FakeHomeOverviewService();
     final localDataState = LocalDataState(
       dataDirectory: 'D:\\Temp\\SpringNote',
       configPath: 'D:\\Temp\\SpringNote\\config.json',
@@ -75,6 +77,7 @@ void main() {
         home: HomePage(
           localDataState: localDataState,
           dailyNoteService: fakeDailyNoteService,
+          homeOverviewService: fakeHomeOverviewService,
         ),
       ),
     );
@@ -85,13 +88,17 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.byType(FilledButton));
-    await tester.pump();
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('完成首页输入流程'), findsOneWidget);
     expect(find.text('问题：按钮状态需要校验'), findsOneWidget);
     expect(find.text('明天补充更多测试'), findsOneWidget);
     expect(fakeDailyNoteService.savedNote?.rawInput, contains('完成首页输入流程'));
+    expect(
+      fakeHomeOverviewService.savedOverview?.completed,
+      contains('完成首页输入流程'),
+    );
   });
 }
 
@@ -99,12 +106,54 @@ class _FakeDailyNoteService extends DailyNoteService {
   StructuredWorkNote? savedNote;
 
   @override
+  Future<String> readDailyMarkdown({
+    required String dailyNotesDirectory,
+    required DateTime date,
+  }) async {
+    return '';
+  }
+
+  @override
   Future<String> mergeStructuredNote({
     required String dailyNotesDirectory,
     required DateTime date,
     required StructuredWorkNote note,
+    String? mergedMarkdown,
   }) async {
     savedNote = note;
     return '$dailyNotesDirectory\\2026-06-18.md';
+  }
+}
+
+class _FakeHomeOverviewService extends HomeOverviewService {
+  StructuredWorkNote? savedOverview;
+
+  @override
+  Future<StructuredWorkNote> readOverview({
+    required String appDataDir,
+    required DateTime date,
+  }) async {
+    return const StructuredWorkNote(
+      rawInput: '',
+      completed: [],
+      issues: [],
+      plans: [],
+    );
+  }
+
+  @override
+  Future<StructuredWorkNote> mergeAndSaveOverview({
+    required String appDataDir,
+    required DateTime date,
+    required StructuredWorkNote current,
+    required StructuredWorkNote incoming,
+  }) async {
+    savedOverview = StructuredWorkNote(
+      rawInput: incoming.rawInput,
+      completed: [...incoming.completed, ...current.completed],
+      issues: [...incoming.issues, ...current.issues],
+      plans: [...incoming.plans, ...current.plans],
+    );
+    return savedOverview!;
   }
 }

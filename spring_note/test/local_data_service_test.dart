@@ -25,6 +25,7 @@ void main() {
     );
     expect(state.config.defaultModels.keys, contains('editCompletionModel'));
     expect(state.config.defaultModels.keys, contains('memoryBookModel'));
+    expect(state.config.apiLogEnabled, isFalse);
   });
 
   test('local data service saves and reads provider model config', () async {
@@ -40,6 +41,7 @@ void main() {
     final provider = ProviderConfig.template('OpenAI');
     final config = state.config.copyWith(
       dailyWorkHours: 9,
+      apiLogEnabled: true,
       providers: [provider],
       defaultModels: {
         ...state.config.defaultModels,
@@ -51,6 +53,7 @@ void main() {
     final reloaded = await service.readConfig();
 
     expect(reloaded.dailyWorkHours, 9);
+    expect(reloaded.apiLogEnabled, isTrue);
     expect(reloaded.providers, hasLength(1));
     expect(reloaded.providers.first.name, 'OpenAI');
     expect(reloaded.providers.first.models.first.fimMode, 'none');

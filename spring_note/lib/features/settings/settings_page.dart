@@ -4,6 +4,7 @@ import '../../core/models/app_config.dart';
 import '../../core/models/local_data_state.dart';
 import '../../core/models/model_config.dart';
 import '../../core/models/provider_config.dart';
+import '../../core/services/ai_client_service.dart';
 import '../../core/services/local_data_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -26,10 +27,12 @@ class SettingsPage extends StatefulWidget {
     super.key,
     required this.localDataState,
     this.localDataService = const LocalDataService(),
+    this.onConfigChanged,
   });
 
   final LocalDataState localDataState;
   final LocalDataService localDataService;
+  final ValueChanged<AppConfig>? onConfigChanged;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -67,6 +70,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     });
     await widget.localDataService.saveConfig(config);
+    widget.onConfigChanged?.call(config);
     if (mounted) {
       setState(() => _saving = false);
     }
@@ -191,6 +195,8 @@ class _SettingsPageState extends State<SettingsPage> {
         configPath: widget.localDataState.configPath,
       ),
       _SettingsSection.providers => _ProvidersPanel(
+        appDataDir: widget.localDataState.dataDirectory,
+        apiLogEnabled: _config.apiLogEnabled,
         providers: _config.providers,
         selectedProvider: _selectedProvider,
         selectedProviderId: _selectedProviderId,
@@ -348,6 +354,12 @@ class _PreferencesPanel extends StatelessWidget {
               onChanged: (value) =>
                   onChanged(config.copyWith(showUpdates: value)),
             ),
+            _SwitchSettingRow(
+              label: '记录 API 网络日志',
+              value: config.apiLogEnabled,
+              onChanged: (value) =>
+                  onChanged(config.copyWith(apiLogEnabled: value)),
+            ),
           ],
         ),
         _SettingsCard(
@@ -374,6 +386,8 @@ class _PreferencesPanel extends StatelessWidget {
 
 class _ProvidersPanel extends StatelessWidget {
   const _ProvidersPanel({
+    required this.appDataDir,
+    required this.apiLogEnabled,
     required this.providers,
     required this.selectedProvider,
     required this.selectedProviderId,
@@ -385,13 +399,15 @@ class _ProvidersPanel extends StatelessWidget {
     required this.onModelDeleted,
   });
 
+  final String appDataDir;
+  final bool apiLogEnabled;
   final List<ProviderConfig> providers;
   final ProviderConfig? selectedProvider;
   final String? selectedProviderId;
   final ValueChanged<String> onSelectedProviderChanged;
-  final ValueChanged<ProviderConfig> onProviderChanged;
-  final ValueChanged<String> onProviderDeleted;
-  final ValueChanged<ProviderConfig> onProviderAdded;
+  final Future<void> Function(ProviderConfig provider) onProviderChanged;
+  final Future<void> Function(String id) onProviderDeleted;
+  final Future<void> Function(ProviderConfig provider) onProviderAdded;
   final Future<void> Function(ProviderConfig provider, ModelConfig model)
   onModelChanged;
   final Future<void> Function(ProviderConfig provider, String modelId)
@@ -449,7 +465,7 @@ class _ProvidersPanel extends StatelessWidget {
                       builder: (_) => const _AddProviderDialog(),
                     );
                     if (provider != null) {
-                      onProviderAdded(provider);
+                      await onProviderAdded(provider);
                     }
                   },
                   icon: const Icon(Icons.add_rounded, size: 17),
@@ -463,6 +479,8 @@ class _ProvidersPanel extends StatelessWidget {
           child: selectedProvider == null
               ? const _EmptyProviderDetails()
               : _ProviderDetails(
+                  appDataDir: appDataDir,
+                  apiLogEnabled: apiLogEnabled,
                   provider: selectedProvider!,
                   onProviderChanged: onProviderChanged,
                   onProviderDeleted: onProviderDeleted,
@@ -517,8 +535,10 @@ class _ProviderListItem extends StatelessWidget {
   }
 }
 
-class _ProviderDetails extends StatelessWidget {
+class _ProviderDetails extends StatefulWidget {
   const _ProviderDetails({
+    required this.appDataDir,
+    required this.apiLogEnabled,
     required this.provider,
     required this.onProviderChanged,
     required this.onProviderDeleted,
@@ -526,16 +546,29 @@ class _ProviderDetails extends StatelessWidget {
     required this.onModelDeleted,
   });
 
+  final String appDataDir;
+  final bool apiLogEnabled;
   final ProviderConfig provider;
-  final ValueChanged<ProviderConfig> onProviderChanged;
-  final ValueChanged<String> onProviderDeleted;
+  final Future<void> Function(ProviderConfig provider) onProviderChanged;
+  final Future<void> Function(String id) onProviderDeleted;
   final Future<void> Function(ProviderConfig provider, ModelConfig model)
   onModelChanged;
   final Future<void> Function(ProviderConfig provider, String modelId)
   onModelDeleted;
 
   @override
+  State<_ProviderDetails> createState() => _ProviderDetailsState();
+}
+
+class _ProviderDetailsState extends State<_ProviderDetails> {
+  final AiClientService _aiClientService = const AiClientService();
+  bool _testingConnection = false;
+  bool _fetchingModels = false;
+  String? _actionMessage;
+
+  @override
   Widget build(BuildContext context) {
+    final provider = widget.provider;
     return _SettingsScrollFrame(
       maxWidth: 1120,
       children: [
@@ -550,12 +583,12 @@ class _ProviderDetails extends StatelessWidget {
             const Spacer(),
             Switch(
               value: provider.enabled,
-              onChanged: (value) =>
-                  onProviderChanged(provider.copyWith(enabled: value)),
+              onChanged: (value) async =>
+                  widget.onProviderChanged(provider.copyWith(enabled: value)),
             ),
             IconButton(
               tooltip: '删除供应商',
-              onPressed: () => onProviderDeleted(provider.id),
+              onPressed: () async => widget.onProviderDeleted(provider.id),
               icon: const Icon(Icons.delete_outline_rounded),
             ),
           ],
@@ -564,34 +597,185 @@ class _ProviderDetails extends StatelessWidget {
         _LooseField(
           label: '名称',
           value: provider.name,
-          onChanged: (value) =>
-              onProviderChanged(provider.copyWith(name: value)),
+          onChanged: (value) {
+            widget.onProviderChanged(provider.copyWith(name: value));
+          },
         ),
         _LooseField(
           label: 'API Key',
           value: provider.apiKey,
           obscureText: true,
-          onChanged: (value) =>
-              onProviderChanged(provider.copyWith(apiKey: value)),
+          onChanged: (value) {
+            widget.onProviderChanged(provider.copyWith(apiKey: value));
+          },
         ),
         _LooseField(
           label: 'API Base URL',
           value: provider.baseUrl,
-          onChanged: (value) =>
-              onProviderChanged(provider.copyWith(baseUrl: value)),
+          onChanged: (value) {
+            widget.onProviderChanged(provider.copyWith(baseUrl: value));
+          },
         ),
         _LooseField(
           label: 'API 路径',
           value: provider.apiPath,
-          onChanged: (value) =>
-              onProviderChanged(provider.copyWith(apiPath: value)),
+          onChanged: (value) {
+            widget.onProviderChanged(provider.copyWith(apiPath: value));
+          },
+        ),
+        const SizedBox(height: 12),
+        _ProviderActionsRow(
+          testingConnection: _testingConnection,
+          fetchingModels: _fetchingModels,
+          message: _actionMessage,
+          onTestConnection: _testConnection,
+          onFetchModels: _fetchModels,
         ),
         const SizedBox(height: 10),
         _ModelsList(
           provider: provider,
-          onModelChanged: onModelChanged,
-          onModelDeleted: onModelDeleted,
+          onModelChanged: widget.onModelChanged,
+          onModelDeleted: widget.onModelDeleted,
         ),
+      ],
+    );
+  }
+
+  Future<void> _testConnection() async {
+    final model = widget.provider.models.isEmpty
+        ? null
+        : widget.provider.models.first;
+    if (model == null) {
+      setState(() => _actionMessage = '请先添加至少一个模型。');
+      return;
+    }
+
+    setState(() {
+      _testingConnection = true;
+      _actionMessage = null;
+    });
+    try {
+      final result = await _aiClientService.testProviderConnection(
+        appDataDir: widget.appDataDir,
+        apiLogEnabled: widget.apiLogEnabled,
+        provider: widget.provider,
+        model: model,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() => _actionMessage = result.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _actionMessage = '连接测试失败，请检查 API Key、Base URL 和模型。');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _testingConnection = false);
+      }
+    }
+  }
+
+  Future<void> _fetchModels() async {
+    setState(() {
+      _fetchingModels = true;
+      _actionMessage = null;
+    });
+    try {
+      final result = await _aiClientService.fetchProviderModels(
+        appDataDir: widget.appDataDir,
+        apiLogEnabled: widget.apiLogEnabled,
+        provider: widget.provider,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (!result.ok) {
+        setState(() => _actionMessage = result.errorMessage);
+        return;
+      }
+      final modelsById = {
+        for (final model in widget.provider.models) model.modelId: model,
+        for (final model in result.models)
+          model.modelId: ModelConfig(
+            modelId: model.modelId,
+            displayName: model.displayName,
+          ),
+      };
+      await widget.onProviderChanged(
+        widget.provider.copyWith(models: modelsById.values.toList()),
+      );
+      if (mounted) {
+        setState(() => _actionMessage = '已获取 ${result.models.length} 个模型。');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _actionMessage = '获取模型失败，请检查供应商配置。');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _fetchingModels = false);
+      }
+    }
+  }
+}
+
+class _ProviderActionsRow extends StatelessWidget {
+  const _ProviderActionsRow({
+    required this.testingConnection,
+    required this.fetchingModels,
+    required this.message,
+    required this.onTestConnection,
+    required this.onFetchModels,
+  });
+
+  final bool testingConnection;
+  final bool fetchingModels;
+  final String? message;
+  final VoidCallback onTestConnection;
+  final VoidCallback onFetchModels;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        OutlinedButton.icon(
+          onPressed: testingConnection ? null : onTestConnection,
+          icon: testingConnection
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.cable_rounded, size: 16),
+          label: Text(testingConnection ? '测试中' : '测试连接'),
+        ),
+        const SizedBox(width: 10),
+        OutlinedButton.icon(
+          onPressed: fetchingModels ? null : onFetchModels,
+          icon: fetchingModels
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.cloud_download_outlined, size: 16),
+          label: Text(fetchingModels ? '获取中' : '获取模型'),
+        ),
+        if (message != null) ...[
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              message!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSubtle),
+            ),
+          ),
+        ] else
+          const Spacer(),
       ],
     );
   }

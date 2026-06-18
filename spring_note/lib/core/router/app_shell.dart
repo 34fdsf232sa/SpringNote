@@ -20,6 +20,15 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   AppSection _section = AppSection.home;
+  late LocalDataState _localDataState = widget.localDataState;
+
+  @override
+  void didUpdateWidget(covariant AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.localDataState != oldWidget.localDataState) {
+      _localDataState = widget.localDataState;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,17 +43,20 @@ class _AppShellState extends State<AppShell> {
             child: KeyedSubtree(
               key: ValueKey(_section),
               child: switch (_section) {
-                AppSection.home => HomePage(
-                  localDataState: widget.localDataState,
-                ),
-                AppSection.notes => NotesPage(
-                  localDataState: widget.localDataState,
-                ),
+                AppSection.home => HomePage(localDataState: _localDataState),
+                AppSection.notes => NotesPage(localDataState: _localDataState),
                 AppSection.memory => MemoryPage(
-                  localDataState: widget.localDataState,
+                  localDataState: _localDataState,
                 ),
                 AppSection.settings => SettingsPage(
-                  localDataState: widget.localDataState,
+                  localDataState: _localDataState,
+                  onConfigChanged: (config) {
+                    setState(() {
+                      _localDataState = _localDataState.copyWith(
+                        config: config,
+                      );
+                    });
+                  },
                 ),
               },
             ),

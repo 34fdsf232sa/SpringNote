@@ -10,6 +10,7 @@ class AppConfig {
     required this.autoStart,
     required this.showUpdates,
     required this.showDesktopWidget,
+    required this.apiLogEnabled,
     required this.providers,
     required this.defaultModels,
     required this.hotkeys,
@@ -23,6 +24,7 @@ class AppConfig {
   final bool autoStart;
   final bool showUpdates;
   final bool showDesktopWidget;
+  final bool apiLogEnabled;
   final List<ProviderConfig> providers;
   final Map<String, String?> defaultModels;
   final Map<String, String?> hotkeys;
@@ -37,6 +39,7 @@ class AppConfig {
       autoStart: false,
       showUpdates: true,
       showDesktopWidget: true,
+      apiLogEnabled: false,
       providers: [],
       defaultModels: {
         'intelligentGenerationModel': null,
@@ -57,6 +60,7 @@ class AppConfig {
       autoStart: json['autoStart'] as bool? ?? false,
       showUpdates: json['showUpdates'] as bool? ?? true,
       showDesktopWidget: json['showDesktopWidget'] as bool? ?? true,
+      apiLogEnabled: json['apiLogEnabled'] as bool? ?? false,
       providers: _readProviders(json['providers']),
       defaultModels: _readStringMap(
         json['defaultModels'],
@@ -76,6 +80,7 @@ class AppConfig {
       'autoStart': autoStart,
       'showUpdates': showUpdates,
       'showDesktopWidget': showDesktopWidget,
+      'apiLogEnabled': apiLogEnabled,
       'providers': providers.map((provider) => provider.toJson()).toList(),
       'defaultModels': defaultModels,
       'hotkeys': hotkeys,
@@ -91,6 +96,7 @@ class AppConfig {
     bool? autoStart,
     bool? showUpdates,
     bool? showDesktopWidget,
+    bool? apiLogEnabled,
     List<ProviderConfig>? providers,
     Map<String, String?>? defaultModels,
     Map<String, String?>? hotkeys,
@@ -104,6 +110,7 @@ class AppConfig {
       autoStart: autoStart ?? this.autoStart,
       showUpdates: showUpdates ?? this.showUpdates,
       showDesktopWidget: showDesktopWidget ?? this.showDesktopWidget,
+      apiLogEnabled: apiLogEnabled ?? this.apiLogEnabled,
       providers: providers ?? this.providers,
       defaultModels: defaultModels ?? this.defaultModels,
       hotkeys: hotkeys ?? this.hotkeys,

@@ -1,14 +1,9 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod ai;
+pub mod ai_claude;
+pub mod ai_gemini;
+pub mod ai_log;
+pub mod ai_openai;
+pub mod api;
+pub mod stats;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+mod frb_generated;
