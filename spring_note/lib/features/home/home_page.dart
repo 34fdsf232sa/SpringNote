@@ -500,40 +500,37 @@ class _IncomeSummary extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 7),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.trending_up_rounded,
-                            size: 12,
-                            color: Color(0xFF059669),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '+${_formatRate(rate)} c/s',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: const Color(0xFF059669),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                          ),
-                        ],
-                      ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.trending_up_rounded,
+                          size: 12,
+                          color: Color(0xFF059669),
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '+${_formatRate(rate)} c/s',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: const Color(0xFF059669),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
