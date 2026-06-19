@@ -518,7 +518,7 @@ class _FimTextEditingController extends TextEditingController {
         TextSpan(text: text.substring(0, offset)),
         TextSpan(
           text: prediction,
-          style: effectiveStyle.copyWith(color: const Color(0xFF94A3B8)),
+          style: effectiveStyle.copyWith(color: const Color(0xFF8A8A8A)),
         ),
         TextSpan(text: text.substring(offset)),
       ],
@@ -550,7 +550,7 @@ class _NotesSidebar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 24, 14, 20),
       decoration: const BoxDecoration(
         color: AppTheme.background,
-        border: Border(right: BorderSide(color: Color(0xFFEEF2F7))),
+        border: Border(right: BorderSide(color: Color(0xFFEEEEEE))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -562,7 +562,7 @@ class _NotesSidebar extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0).withValues(alpha: 0.6),
+                  color: const Color(0xFFE0E0E0).withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -648,7 +648,7 @@ class _NotesSearchFieldState extends State<_NotesSearchField> {
       curve: Curves.easeOutCubic,
       height: 40,
       decoration: BoxDecoration(
-        color: focused ? const Color(0xFFE8EDF3) : const Color(0xFFF1F5F9),
+        color: focused ? const Color(0xFFE2E2E2) : const Color(0xFFEDEDED),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
@@ -669,7 +669,7 @@ class _NotesSearchFieldState extends State<_NotesSearchField> {
             prefixIcon: const Icon(
               Icons.search_rounded,
               size: 18,
-              color: Color(0xFF94A3B8),
+              color: Color(0xFF8A8A8A),
             ),
             prefixIconConstraints: const BoxConstraints(
               minWidth: 40,
@@ -712,8 +712,8 @@ class _NoteListItemState extends State<_NoteListItem> {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = widget.selected
-        ? const Color(0xFFF1F5F9).withValues(alpha: 0.8)
-        : const Color(0xFFF8FAFC);
+        ? const Color(0xFFE2E2E2)
+        : const Color(0xFFF5F5F5);
     final active = widget.selected || _hovered;
 
     return MouseRegion(
@@ -821,7 +821,7 @@ class _EditorPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const editorStyle = TextStyle(
-      color: Color(0xFF334155),
+      color: Color(0xFF3A3A3A),
       fontFamily: 'Consolas',
       fontSize: 13,
       height: 1.75,
@@ -836,7 +836,7 @@ class _EditorPane extends StatelessWidget {
                 const Icon(
                   Icons.code_rounded,
                   size: 15,
-                  color: Color(0xFF94A3B8),
+                  color: Color(0xFF8A8A8A),
                 ),
                 const SizedBox(width: 8),
                 Flexible(
@@ -845,7 +845,7 @@ class _EditorPane extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF94A3B8),
+                      color: const Color(0xFF8A8A8A),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.8,
@@ -878,7 +878,7 @@ class _EditorPane extends StatelessWidget {
                   keyboardType: TextInputType.multiline,
                   decoration: InputDecoration(
                     hintText: '# 开始编辑 Markdown...',
-                    hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                    hintStyle: const TextStyle(color: Color(0xFFCFCFCF)),
                     filled: true,
                     fillColor: Colors.white,
                     hoverColor: Colors.white,
@@ -928,10 +928,10 @@ class _EditorStatusPill extends StatelessWidget {
         statusText.startsWith('Tab ');
     final foreground = active
         ? const Color(0xFF10B981)
-        : const Color(0xFF64748B);
+        : const Color(0xFF666666);
     final background = active
         ? const Color(0xFFECFDF5)
-        : const Color(0xFFF8FAFC);
+        : const Color(0xFFF5F5F5);
 
     return Align(
       alignment: Alignment.centerRight,
@@ -971,8 +971,8 @@ class _FimPredictingChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC).withValues(alpha: 0.92),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: const Color(0xFFF5F5F5).withValues(alpha: 0.92),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: const Padding(
@@ -983,12 +983,12 @@ class _FimPredictingChip extends StatelessWidget {
             Icon(
               Icons.auto_awesome_rounded,
               size: 14,
-              color: Color(0xFF94A3B8),
+              color: Color(0xFF8A8A8A),
             ),
             SizedBox(width: 7),
             Text(
               '补全预测中',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
             ),
           ],
         ),
@@ -1011,7 +1011,7 @@ class _PreviewPane extends StatelessWidget {
           Text(
             'Markdown Preview · 渲染预览',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF94A3B8),
+              color: const Color(0xFF8A8A8A),
               fontSize: 12,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.8,
@@ -1046,7 +1046,7 @@ class _PaneFrame extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(left: BorderSide(color: Color(0xFFEFF3F8))),
+        border: Border(left: BorderSide(color: Color(0xFFEEEEEE))),
       ),
       child: Column(
         children: [
@@ -1054,7 +1054,7 @@ class _PaneFrame extends StatelessWidget {
             height: 56,
             padding: headerPadding,
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+              border: Border(bottom: BorderSide(color: Color(0xFFEDEDED))),
             ),
             child: header,
           ),

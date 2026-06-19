@@ -73,8 +73,8 @@ class DesktopStatusWidget extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 2,
-                          color: const Color(0xFFCBD5E1),
-                          backgroundColor: const Color(0xFFF1F5F9),
+                          color: const Color(0xFFCFCFCF),
+                          backgroundColor: const Color(0xFFEDEDED),
                         ),
                       ),
                     ],
@@ -148,7 +148,7 @@ class _StatusDot extends StatelessWidget {
       width: 6,
       height: 6,
       decoration: BoxDecoration(
-        color: running ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+        color: running ? const Color(0xFF10B981) : const Color(0xFFCFCFCF),
         shape: BoxShape.circle,
       ),
     );

@@ -595,7 +595,7 @@ class _MemoryHeader extends StatelessWidget {
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 32),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFEEF2F7))),
+        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
       ),
       child: Row(
         children: [
@@ -622,7 +622,7 @@ class _MemoryHeader extends StatelessWidget {
               minimumSize: const Size(34, 34),
               maximumSize: const Size(34, 34),
               backgroundColor: Colors.transparent,
-              hoverColor: const Color(0xFFF1F5F9),
+              hoverColor: const Color(0xFFEDEDED),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -728,7 +728,7 @@ class _MemoryComposer extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A0F172A),
+            color: Color(0x0A171717),
             blurRadius: 28,
             offset: Offset(0, 8),
           ),
@@ -772,7 +772,7 @@ class _MemoryComposer extends StatelessWidget {
             onPressed: answering ? null : onSubmit,
             style: IconButton.styleFrom(
               backgroundColor: AppTheme.text,
-              disabledBackgroundColor: const Color(0xFFE2E8F0),
+              disabledBackgroundColor: const Color(0xFFE0E0E0),
             ),
             icon: answering
                 ? const SizedBox(
@@ -853,8 +853,8 @@ class _ThinkingControl extends StatelessWidget {
           final segmentWidth = constraints.maxWidth / 3;
           return Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: const Color(0xFFEDEDED),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Stack(
@@ -872,7 +872,7 @@ class _ThinkingControl extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x140F172A),
+                          color: Color(0x14171717),
                           blurRadius: 10,
                           offset: Offset(0, 2),
                         ),
@@ -974,7 +974,7 @@ class _MemoryMessageView extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 28),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: const Color(0xFFF5F5F5),
             borderRadius: BorderRadius.circular(22),
           ),
           child: Text(
@@ -1067,8 +1067,8 @@ class _ToolAttachmentChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: const Color(0xFFF5F5F5),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Row(
@@ -1226,8 +1226,8 @@ class _ToolDetailBlock extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: const Color(0xFFF5F5F5),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
               borderRadius: BorderRadius.circular(14),
             ),
             child: SelectableText(
@@ -1295,8 +1295,8 @@ class _ReasoningBlockState extends State<_ReasoningBlock> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: const Color(0xFFF5F5F5),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

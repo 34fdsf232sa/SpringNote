@@ -232,24 +232,24 @@ void DesktopWidgetWindow::Paint() {
   header_stream << L"Lv." << state_.level << L" \u5b9e\u4e60\u751f ("
                 << state_.experience_percent << L"%)";
   DrawTextLine(memory_dc, header_stream.str(), header_rect, 14, FW_SEMIBOLD,
-               RGB(100, 116, 139),
+               RGB(102, 102, 102),
                DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
 
   RECT track{16, 39, kWindowWidth - 16, 41};
-  FillRoundRect(memory_dc, track, 2, RGB(241, 245, 249));
+  FillRoundRect(memory_dc, track, 2, RGB(237, 237, 237));
   RECT progress = track;
   progress.right =
       progress.left + static_cast<LONG>((track.right - track.left) *
                                         std::clamp(state_.progress, 0.0, 1.0));
   if (progress.right > progress.left) {
-    FillRoundRect(memory_dc, progress, 2, RGB(203, 213, 225));
+    FillRoundRect(memory_dc, progress, 2, RGB(207, 207, 207));
   }
 
   std::wstringstream coins_stream;
   coins_stream << std::fixed << std::setprecision(2) << state_.coins;
   RECT coins_rect{16, 54, kWindowWidth - 16, 98};
   DrawTextLine(memory_dc, coins_stream.str(), coins_rect, 38, FW_MEDIUM,
-               RGB(15, 23, 42), DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+               RGB(23, 23, 23), DT_LEFT | DT_SINGLELINE | DT_VCENTER);
 
   std::wstringstream rate_stream;
   rate_stream << L"+" << std::fixed << std::setprecision(3)
@@ -260,10 +260,10 @@ void DesktopWidgetWindow::Paint() {
                RGB(16, 185, 129), DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
 
   HBRUSH dot_brush =
-      CreateSolidBrush(state_.running ? RGB(16, 185, 129) : RGB(203, 213, 225));
+      CreateSolidBrush(state_.running ? RGB(16, 185, 129) : RGB(207, 207, 207));
   HBRUSH old_dot_brush = static_cast<HBRUSH>(SelectObject(memory_dc, dot_brush));
   HPEN dot_pen = CreatePen(
-      PS_SOLID, 1, state_.running ? RGB(16, 185, 129) : RGB(203, 213, 225));
+      PS_SOLID, 1, state_.running ? RGB(16, 185, 129) : RGB(207, 207, 207));
   HPEN old_dot_pen = static_cast<HPEN>(SelectObject(memory_dc, dot_pen));
   Ellipse(memory_dc, kWindowWidth - 96, 118, kWindowWidth - 90, 124);
   SelectObject(memory_dc, old_dot_pen);
@@ -273,9 +273,9 @@ void DesktopWidgetWindow::Paint() {
 
   RECT time_rect{kWindowWidth - 84, 111, kWindowWidth - 16, 130};
   DrawTextLine(memory_dc, FormatDuration(), time_rect, 13, FW_NORMAL,
-               RGB(100, 116, 139), DT_RIGHT | DT_SINGLELINE);
+               RGB(102, 102, 102), DT_RIGHT | DT_SINGLELINE);
 
-  HPEN border_pen = CreatePen(PS_SOLID, 1, RGB(229, 231, 235));
+  HPEN border_pen = CreatePen(PS_SOLID, 1, RGB(229, 229, 229));
   HBRUSH hollow = static_cast<HBRUSH>(GetStockObject(HOLLOW_BRUSH));
   HPEN old_border_pen = static_cast<HPEN>(SelectObject(memory_dc, border_pen));
   HBRUSH old_hollow = static_cast<HBRUSH>(SelectObject(memory_dc, hollow));

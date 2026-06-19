@@ -160,7 +160,7 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.fromLTRB(18, 28, 18, 18),
             decoration: const BoxDecoration(
               color: AppTheme.background,
-              border: Border(right: BorderSide(color: Color(0xFFEEF2F7))),
+              border: Border(right: BorderSide(color: Color(0xFFEEEEEE))),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,8 +259,8 @@ class _SettingsNavItemState extends State<_SettingsNavItem> {
     final active = widget.selected || _hovered;
     final contentColor = active ? AppTheme.text : AppTheme.textMuted;
     final backgroundColor = widget.selected
-        ? const Color(0xCCF1F5F9)
-        : const Color(0x99F1F5F9);
+        ? const Color(0xFFE2E2E2)
+        : const Color(0xFFF5F5F5);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -340,8 +340,8 @@ class _ProviderListItemState extends State<_ProviderListItem> {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = widget.selected
-        ? const Color(0xE6F1F5F9)
-        : const Color(0xFFF8FAFC);
+        ? const Color(0xFFE2E2E2)
+        : const Color(0xFFF5F5F5);
     final active = widget.selected || _hovered;
 
     return MouseRegion(
@@ -376,7 +376,7 @@ class _ProviderListItemState extends State<_ProviderListItem> {
                     children: [
                       CircleAvatar(
                         radius: 14,
-                        backgroundColor: const Color(0xFFEFF6FF),
+                        backgroundColor: const Color(0xFFEDEDED),
                         child: Text(
                           widget.provider.name.characters.first.toUpperCase(),
                           style: const TextStyle(
@@ -738,7 +738,7 @@ class _ProvidersPanel extends StatelessWidget {
           width: 320,
           padding: const EdgeInsets.all(18),
           decoration: const BoxDecoration(
-            border: Border(right: BorderSide(color: Color(0xFFEEF2F7))),
+            border: Border(right: BorderSide(color: Color(0xFFEEEEEE))),
           ),
           child: Column(
             children: [
@@ -1105,7 +1105,7 @@ class _ModelsList extends StatelessWidget {
               height: 54,
               padding: const EdgeInsets.symmetric(horizontal: 18),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFEEF2F7))),
+                border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
               ),
               child: Row(
                 children: [
@@ -1215,6 +1215,20 @@ class _DefaultModelCard extends StatelessWidget {
   final List<ModelConfig> models;
   final ValueChanged<String?> onSelected;
 
+  Future<void> _openPicker(BuildContext context) async {
+    final result = await showDialog<_ModelSelectionResult>(
+      context: context,
+      builder: (_) => _ModelPickerDialog(
+        title: title,
+        models: models,
+        selectedModelId: value,
+      ),
+    );
+    if (result != null) {
+      onSelected(result.modelId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = models
@@ -1234,44 +1248,260 @@ class _DefaultModelCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(description, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 14),
-          PopupMenuButton<String?>(
+          MouseRegion(
             key: ValueKey('default-model-$title'),
-            onSelected: onSelected,
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: null, child: Text('未选择')),
-              for (final model in models)
-                PopupMenuItem(
-                  value: model.modelId,
-                  child: Text(model.displayName),
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _openPicker(context),
+              child: Container(
+                height: 54,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceMuted,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-            ],
-            child: Container(
-              height: 54,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceMuted,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 13,
-                    backgroundColor: value == null
-                        ? const Color(0xFFE2E8F0)
-                        : const Color(0xFFDCFCE7),
-                    child: Text(
-                      value == null ? '未' : '已',
-                      style: const TextStyle(fontSize: 11),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 13,
+                      backgroundColor: value == null
+                          ? const Color(0xFFE0E0E0)
+                          : const Color(0xFFDCFCE7),
+                      child: Text(
+                        value == null ? '未' : '已',
+                        style: const TextStyle(fontSize: 11),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(selected?.displayName ?? '未选择模型')),
-                  const Icon(Icons.expand_more_rounded),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(selected?.displayName ?? '未选择模型')),
+                    const Icon(Icons.expand_more_rounded),
+                  ],
+                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ModelSelectionResult {
+  const _ModelSelectionResult(this.modelId);
+
+  final String? modelId;
+}
+
+class _ModelPickerDialog extends StatefulWidget {
+  const _ModelPickerDialog({
+    required this.title,
+    required this.models,
+    required this.selectedModelId,
+  });
+
+  final String title;
+  final List<ModelConfig> models;
+  final String? selectedModelId;
+
+  @override
+  State<_ModelPickerDialog> createState() => _ModelPickerDialogState();
+}
+
+class _ModelPickerDialogState extends State<_ModelPickerDialog> {
+  late final TextEditingController _controller = TextEditingController();
+  String _query = '';
+  String? _hoveredOptionKey;
+
+  List<ModelConfig?> get _models {
+    final normalizedQuery = _query.trim().toLowerCase();
+    final values = <ModelConfig?>[null, ...widget.models];
+    if (normalizedQuery.isEmpty) {
+      return values;
+    }
+    return values.where((model) {
+      if (model == null) {
+        return '未选择'.contains(normalizedQuery);
+      }
+      return model.displayName.toLowerCase().contains(normalizedQuery);
+    }).toList();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final models = _models;
+    return Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: SizedBox(
+        width: 460,
+        height: 560,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 14, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '选择${widget.title}',
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '关闭',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+              child: _SettingsSearchField(
+                controller: _controller,
+                autofocus: true,
+                hintText: '搜索模型',
+                onChanged: (value) => setState(() => _query = value),
+              ),
+            ),
+            Expanded(
+              child: models.isEmpty
+                  ? Center(
+                      child: Text(
+                        '没有匹配的模型',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+                      itemCount: models.length,
+                      itemBuilder: (context, index) {
+                        final model = models[index];
+                        final optionKey = model?.modelId ?? '__none__';
+                        return _ModelOptionTile(
+                          model: model,
+                          selected: model?.modelId == widget.selectedModelId,
+                          hovered: optionKey == _hoveredOptionKey,
+                          onHoverChanged: (hovered) {
+                            setState(() {
+                              if (hovered) {
+                                _hoveredOptionKey = optionKey;
+                              } else if (_hoveredOptionKey == optionKey) {
+                                _hoveredOptionKey = null;
+                              }
+                            });
+                          },
+                          onTap: () => Navigator.of(
+                            context,
+                          ).pop(_ModelSelectionResult(model?.modelId)),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModelOptionTile extends StatelessWidget {
+  const _ModelOptionTile({
+    required this.model,
+    required this.selected,
+    required this.hovered,
+    required this.onHoverChanged,
+    required this.onTap,
+  });
+
+  final ModelConfig? model;
+  final bool selected;
+  final bool hovered;
+  final ValueChanged<bool> onHoverChanged;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = selected || hovered;
+    final backgroundColor = selected
+        ? const Color(0xFFE2E2E2)
+        : const Color(0xFFF5F5F5);
+    final title = model?.displayName ?? '未选择';
+    final contentColor = active ? AppTheme.text : AppTheme.textMuted;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => onHoverChanged(true),
+      onExit: (_) => onHoverChanged(false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: 48,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 4,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.easeOutCubic,
+                  opacity: active ? 1 : 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 4,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: contentColor,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                height: 1.2,
+                              ),
+                        ),
+                      ),
+                      if (selected)
+                        const Icon(
+                          Icons.check_rounded,
+                          size: 17,
+                          color: AppTheme.text,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1393,7 +1623,7 @@ class _StatsPanelState extends State<_StatsPanel> {
                 const SizedBox(width: 8),
                 Chip(
                   label: Text(loading ? '读取中' : '已同步 SQLite'),
-                  backgroundColor: const Color(0xFFF8FAFC),
+                  backgroundColor: const Color(0xFFF5F5F5),
                 ),
                 const Spacer(),
                 IconButton(
@@ -1488,7 +1718,7 @@ class _YearHeatmap extends StatelessWidget {
   final List<rust_stats.DailyActivity> activity;
 
   static const _colors = [
-    Color(0xFFF1F5F9),
+    Color(0xFFEDEDED),
     Color(0xFFDCFCE7),
     Color(0xFFBBF7D0),
     Color(0xFF86EFAC),
@@ -1662,7 +1892,7 @@ class _UsageTrendChartState extends State<_UsageTrendChart> {
                   label: Text(
                     '${model.label} · ${_formatNumber(model.tokens)}',
                   ),
-                  backgroundColor: const Color(0xFFF8FAFC),
+                  backgroundColor: const Color(0xFFF5F5F5),
                 ),
           ],
         ),
@@ -1741,8 +1971,8 @@ class _UsageBar extends StatelessWidget {
                     width: 14,
                     decoration: BoxDecoration(
                       color: point.totalTokens == 0
-                          ? const Color(0xFFE2E8F0)
-                          : const Color(0xFF3B82F6),
+                          ? const Color(0xFFE0E0E0)
+                          : const Color(0xFF666666),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -2333,9 +2563,9 @@ class _FontPickerButtonState extends State<_FontPickerButton> {
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 13),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
+            color: active ? const Color(0xFFEDEDED) : const Color(0xFFF5F5F5),
             border: Border.all(
-              color: active ? const Color(0xFFCBD5E1) : const Color(0xFFE5E7EB),
+              color: active ? const Color(0xFFCFCFCF) : const Color(0xFFE5E5E5),
             ),
             borderRadius: BorderRadius.circular(14),
           ),
@@ -2434,16 +2664,12 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
-              child: TextField(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+              child: _SettingsSearchField(
                 controller: _controller,
                 autofocus: true,
+                hintText: '搜索系统字体',
                 onChanged: (value) => setState(() => _query = value),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  prefixIcon: Icon(Icons.search_rounded, size: 17),
-                  hintText: '搜索系统字体',
-                ),
               ),
             ),
             Expanded(
@@ -2484,6 +2710,94 @@ class _FontPickerDialogState extends State<_FontPickerDialog> {
   }
 }
 
+class _SettingsSearchField extends StatefulWidget {
+  const _SettingsSearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.hintText,
+    this.autofocus = false,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final String hintText;
+  final bool autofocus;
+
+  @override
+  State<_SettingsSearchField> createState() => _SettingsSearchFieldState();
+}
+
+class _SettingsSearchFieldState extends State<_SettingsSearchField> {
+  late final FocusNode _focusNode = FocusNode()
+    ..addListener(_handleFocusChanged);
+
+  void _handleFocusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode
+      ..removeListener(_handleFocusChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final focused = _focusNode.hasFocus;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOutCubic,
+      height: 40,
+      decoration: BoxDecoration(
+        color: focused ? const Color(0xFFE2E2E2) : const Color(0xFFEDEDED),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: TextField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          autofocus: widget.autofocus,
+          onChanged: widget.onChanged,
+          textAlignVertical: TextAlignVertical.center,
+          cursorHeight: 16,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text, height: 1.2),
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSubtle.withValues(alpha: 0.78),
+              height: 1.2,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              size: 18,
+              color: Color(0xFF8A8A8A),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 40,
+            ),
+            isDense: true,
+            isCollapsed: true,
+            filled: false,
+            hoverColor: Colors.transparent,
+            contentPadding: const EdgeInsets.only(right: 12),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FontOptionTile extends StatelessWidget {
   const _FontOptionTile({
     required this.font,
@@ -2504,8 +2818,8 @@ class _FontOptionTile extends StatelessWidget {
     final active = selected || hovered;
     final fontFamily = font == 'system' ? null : font;
     final backgroundColor = selected
-        ? const Color(0xE6F1F5F9)
-        : const Color(0xFFF8FAFC);
+        ? const Color(0xFFE2E2E2)
+        : const Color(0xFFF5F5F5);
     final contentColor = active ? AppTheme.text : AppTheme.textMuted;
 
     return MouseRegion(
@@ -2676,7 +2990,7 @@ class _SettingRowShell extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 58),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFEEF2F7))),
+        border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
       ),
       child: Row(
         children: [

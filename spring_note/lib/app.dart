@@ -108,7 +108,7 @@ class AppStartupError extends StatelessWidget {
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            border: Border.all(color: const Color(0xFFE5E5E5)),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
@@ -123,7 +123,7 @@ class AppStartupError extends StatelessWidget {
               Text(
                 error,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF64748B),
+                  color: const Color(0xFF666666),
                 ),
               ),
             ],

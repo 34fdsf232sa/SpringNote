@@ -435,7 +435,7 @@ class _IncomeSummary extends StatelessWidget {
             Text(
               'LEVEL ${levelProgressState.level.toString().padLeft(2, '0')}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF3B82F6),
+                color: const Color(0xFF666666),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1,
@@ -455,7 +455,7 @@ class _IncomeSummary extends StatelessWidget {
                   Text(
                     progressLabel,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: const Color(0xFF2563EB),
+                      color: const Color(0xFF4F4F4F),
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -473,7 +473,7 @@ class _IncomeSummary extends StatelessWidget {
               Text(
                 'EARNINGS TODAY',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF94A3B8),
+                  color: const Color(0xFF8A8A8A),
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1,
@@ -492,7 +492,7 @@ class _IncomeSummary extends StatelessWidget {
                           ?.copyWith(
                             fontSize: 56,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
+                            color: const Color(0xFF171717),
                             letterSpacing: -3.2,
                             height: 1,
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -543,7 +543,7 @@ class _IncomeSummary extends StatelessWidget {
                     TextSpan(
                       text: _formatCoinAmount(visibleTotalCoins),
                       style: const TextStyle(
-                        color: Color(0xFF64748B),
+                        color: Color(0xFF666666),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -551,7 +551,7 @@ class _IncomeSummary extends StatelessWidget {
                   ],
                 ),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF94A3B8),
+                  color: const Color(0xFF8A8A8A),
                   fontSize: 12,
                   letterSpacing: 0.1,
                 ),
@@ -591,12 +591,12 @@ class _LevelRingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final backgroundPaint = Paint()
-      ..color = const Color(0xFFEFF6FF)
+      ..color = const Color(0xFFEDEDED)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round;
     final progressPaint = Paint()
-      ..color = const Color(0xFF3B82F6)
+      ..color = const Color(0xFF666666)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round;
@@ -630,7 +630,7 @@ class _ActivityPreview extends StatelessWidget {
   final bool withDivider;
 
   static const _colors = [
-    Color(0xFFF1F5F9),
+    Color(0xFFEDEDED),
     Color(0xFFDCFCE7),
     Color(0xFFBBF7D0),
     Color(0xFF86EFAC),
@@ -695,7 +695,7 @@ class _ActivityPreview extends StatelessWidget {
                 const _ActivityMetric(
                   label: '上次同步',
                   value: '刚刚',
-                  valueColor: Color(0xFF64748B),
+                  valueColor: Color(0xFF666666),
                 ),
               ],
             ),
@@ -712,7 +712,7 @@ class _ActivityPreview extends StatelessWidget {
       width: 392,
       padding: const EdgeInsets.only(left: 32),
       decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: Color(0xFFF1F5F9))),
+        border: Border(left: BorderSide(color: Color(0xFFEDEDED))),
       ),
       child: content,
     );
@@ -752,7 +752,7 @@ class _ActivityMetric extends StatelessWidget {
   const _ActivityMetric({
     required this.label,
     required this.value,
-    this.valueColor = const Color(0xFF334155),
+    this.valueColor = const Color(0xFF3A3A3A),
   });
 
   final String label;
@@ -997,7 +997,7 @@ class _HeatmapTooltip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: const Color(0xFFF1F5F9)),
+          border: Border.all(color: const Color(0xFFEDEDED)),
           borderRadius: BorderRadius.circular(8),
           boxShadow: const [
             BoxShadow(
@@ -1018,7 +1018,7 @@ class _HeatmapTooltip extends StatelessWidget {
 
   InlineSpan _tooltipMessage() {
     const baseStyle = TextStyle(
-      color: Color(0xFF1E293B),
+      color: Color(0xFF262626),
       fontSize: 11,
       fontWeight: FontWeight.w500,
       height: 1.2,
@@ -1035,7 +1035,7 @@ class _HeatmapTooltip extends StatelessWidget {
           TextSpan(
             text: dateLabel,
             style: const TextStyle(
-              color: Color(0xFF475569),
+              color: Color(0xFF4F4F4F),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1060,7 +1060,7 @@ class _HeatmapTooltip extends StatelessWidget {
         TextSpan(
           text: dateLabel,
           style: const TextStyle(
-            color: Color(0xFF475569),
+            color: Color(0xFF4F4F4F),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1093,11 +1093,11 @@ class _QuickCaptureCard extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: focused ? const Color(0xE6F8FAFC) : const Color(0x99F8FAFC),
+            color: focused ? const Color(0xE6F5F5F5) : const Color(0x99F5F5F5),
             border: Border.all(
               color: focused
-                  ? const Color(0xCCCBD5E1)
-                  : const Color(0x99E2E8F0),
+                  ? const Color(0xCCCFCFCF)
+                  : const Color(0x99E0E0E0),
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1127,7 +1127,7 @@ class _QuickCaptureCard extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: '写下你的想法，AI 将自动整理并生成结构化内容...',
                     hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xCC94A3B8),
+                      color: const Color(0xCC8A8A8A),
                     ),
                     hoverColor: Colors.transparent,
                     focusColor: Colors.transparent,
@@ -1139,7 +1139,7 @@ class _QuickCaptureCard extends StatelessWidget {
                     focusedBorder: InputBorder.none,
                   ),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF1E293B),
+                    color: const Color(0xFF262626),
                     fontSize: 14,
                     height: 1.625,
                   ),
@@ -1148,7 +1148,7 @@ class _QuickCaptureCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.only(top: 8),
                 decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: Color(0x80F1F5F9))),
+                  border: Border(top: BorderSide(color: Color(0x80EDEDED))),
                 ),
                 child: Row(
                   children: [
@@ -1227,8 +1227,8 @@ class _SmartGenerateButtonState extends State<_SmartGenerateButton> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: _hovered && widget.canSubmit
-                ? const Color(0xFF1E293B)
-                : const Color(0xFF0F172A),
+                ? const Color(0xFF262626)
+                : const Color(0xFF171717),
             borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
@@ -1308,7 +1308,7 @@ class _ToolIconState extends State<_ToolIcon> {
             child: _LucideToolbarIcon(
               type: widget.type,
               size: 16,
-              color: _hovered ? const Color(0xFF475569) : AppTheme.textSubtle,
+              color: _hovered ? const Color(0xFF4F4F4F) : AppTheme.textSubtle,
             ),
           ),
         ),
@@ -1739,7 +1739,7 @@ class _OverviewCard extends StatelessWidget {
                                         .bodyMedium
                                         ?.copyWith(
                                           color: index == 0
-                                              ? const Color(0xFF475569)
+                                              ? const Color(0xFF4F4F4F)
                                               : AppTheme.textSubtle,
                                           fontSize: 12,
                                           height: 1.333,

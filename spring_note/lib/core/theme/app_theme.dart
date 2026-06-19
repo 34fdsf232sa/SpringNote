@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 class AppTheme {
   const AppTheme._();
 
-  static const Color background = Color(0xFFFCFCFD);
-  static const Color sidebar = Color(0xFFFCFCFD);
+  static const Color background = Color(0xFFFCFCFC);
+  static const Color sidebar = Color(0xFFFCFCFC);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceMuted = Color(0xFFF1F5F9);
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color text = Color(0xFF0F172A);
-  static const Color textMuted = Color(0xFF475569);
-  static const Color textSubtle = Color(0xFF64748B);
+  static const Color surfaceMuted = Color(0xFFEDEDED);
+  static const Color border = Color(0xFFE5E5E5);
+  static const Color text = Color(0xFF171717);
+  static const Color textMuted = Color(0xFF4F4F4F);
+  static const Color textSubtle = Color(0xFF666666);
 
   static ThemeData light({String appFont = 'system'}) {
     final fontFamily = appFont.trim().isEmpty || appFont == 'system'
@@ -87,7 +87,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: const Color(0xFFF5F5F5),
         hintStyle: const TextStyle(color: textSubtle),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
@@ -103,7 +103,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+          borderSide: const BorderSide(color: Color(0xFFCFCFCF)),
         ),
       ),
     );

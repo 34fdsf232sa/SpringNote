@@ -283,9 +283,9 @@ void Win32Window::UpdateTheme(HWND const window) {
   DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE,
                         &enable_dark_mode, sizeof(enable_dark_mode));
 
-  const COLORREF caption_color = RGB(252, 252, 253);
-  const COLORREF text_color = RGB(15, 23, 42);
-  const COLORREF border_color = RGB(226, 232, 240);
+  const COLORREF caption_color = RGB(252, 252, 252);
+  const COLORREF text_color = RGB(23, 23, 23);
+  const COLORREF border_color = RGB(229, 229, 229);
 
   DwmSetWindowAttribute(window, DWMWA_CAPTION_COLOR, &caption_color,
                         sizeof(caption_color));

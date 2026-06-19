@@ -258,9 +258,9 @@ class _SidebarButtonState extends State<_SidebarButton> {
   Widget build(BuildContext context) {
     final active = widget.selected || _hovered;
     final backgroundColor = widget.selected
-        ? const Color(0xCCF1F5F9)
-        : const Color(0xFFF8FAFC);
-    final iconColor = active ? AppTheme.text : const Color(0xFF94A3B8);
+        ? const Color(0xFFE2E2E2)
+        : const Color(0xFFF5F5F5);
+    final iconColor = active ? AppTheme.text : AppTheme.textSubtle;
 
     return Tooltip(
       message: widget.tooltip,
