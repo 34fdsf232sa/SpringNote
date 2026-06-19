@@ -583,14 +583,7 @@ class _NotesSidebar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: searchController,
-            decoration: const InputDecoration(
-              hintText: '搜索知识记录...',
-              prefixIcon: Icon(Icons.search_rounded, size: 18),
-              isDense: true,
-            ),
-          ),
+          _NotesSearchField(controller: searchController),
           const SizedBox(height: 16),
           Expanded(
             child: notes.isEmpty
@@ -615,6 +608,84 @@ class _NotesSidebar extends StatelessWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NotesSearchField extends StatefulWidget {
+  const _NotesSearchField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  State<_NotesSearchField> createState() => _NotesSearchFieldState();
+}
+
+class _NotesSearchFieldState extends State<_NotesSearchField> {
+  late final FocusNode _focusNode = FocusNode()
+    ..addListener(_handleFocusChanged);
+
+  void _handleFocusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode
+      ..removeListener(_handleFocusChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final focused = _focusNode.hasFocus;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOutCubic,
+      height: 40,
+      decoration: BoxDecoration(
+        color: focused ? const Color(0xFFE8EDF3) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: TextField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          textAlignVertical: TextAlignVertical.center,
+          cursorHeight: 16,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text, height: 1.2),
+          decoration: InputDecoration(
+            hintText: '搜索知识记录...',
+            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSubtle.withValues(alpha: 0.78),
+              height: 1.2,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              size: 18,
+              color: Color(0xFF94A3B8),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 40,
+            ),
+            isDense: true,
+            isCollapsed: true,
+            filled: false,
+            hoverColor: Colors.transparent,
+            contentPadding: const EdgeInsets.only(right: 12),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+          ),
+        ),
       ),
     );
   }
