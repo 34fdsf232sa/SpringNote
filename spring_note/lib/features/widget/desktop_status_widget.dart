@@ -22,7 +22,10 @@ class DesktopStatusWidget extends StatelessWidget {
       animation: controller,
       builder: (context, _) {
         final state = controller.state;
-        final progress = ((state.workSeconds / (8 * 3600)).clamp(0.0, 1.0));
+        final progress = (levelProgressState.experiencePercent / 100).clamp(
+          0.0,
+          1.0,
+        );
         return GestureDetector(
           onTap: controller.toggle,
           onSecondaryTap: onOpenHome,
@@ -35,7 +38,7 @@ class DesktopStatusWidget extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: const Color(0x0A000000)),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x0A000000),
@@ -57,25 +60,14 @@ class DesktopStatusWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        state.running
-                            ? 'Lv.${levelProgressState.level} 实习生 · 工作中'
-                            : 'Lv.${levelProgressState.level} 实习生 · 已暂停',
+                        'Lv.${levelProgressState.level} 实习生 (${levelProgressState.experiencePercent}%)',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.textSubtle,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'EXP ${levelProgressState.experiencePercent}% · 今日有效 ${levelProgressState.todayValidSubmissions}/10',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSubtle,
-                          fontSize: 11,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(1),
                         child: LinearProgressIndicator(
@@ -102,8 +94,8 @@ class DesktopStatusWidget extends StatelessWidget {
                       Expanded(
                         child: Text(
                           state.running
-                              ? '+${controller.coinRatePerSecond.toStringAsFixed(3)}/s'
-                              : '+0.000/s',
+                              ? '+${controller.coinRatePerSecond.toStringAsFixed(3)} coin/s'
+                              : '+0.000 coin/s',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall

@@ -47,7 +47,7 @@ void main() {
     );
 
     expect(find.text('首页'), findsOneWidget);
-    expect(find.text('今日收益'), findsOneWidget);
+    expect(find.text('EARNINGS TODAY'), findsOneWidget);
     expect(find.text('完成事项'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.settings_outlined));

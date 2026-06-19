@@ -18,25 +18,59 @@ class SpringNotePageScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppTheme.background,
-      child: Container(
-        color: AppTheme.background,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(32, 24, 32, 16),
-              child: Row(
-                children: [
-                  Text(title, style: Theme.of(context).textTheme.titleLarge),
-                  const Spacer(),
-                  ...?actions,
-                ],
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1184),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(48, 30, 48, 22),
+                child: Row(
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    const Spacer(),
+                    ...?actions,
+                  ],
+                ),
               ),
-            ),
-            Expanded(child: child),
-          ],
+              Expanded(child: child),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class SpringNoteIconButton extends StatelessWidget {
+  const SpringNoteIconButton({
+    super.key,
+    required this.icon,
+    this.tooltip,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String? tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      color: AppTheme.textSubtle,
+      style: IconButton.styleFrom(
+        fixedSize: const Size(34, 34),
+        minimumSize: const Size(34, 34),
+        maximumSize: const Size(34, 34),
+        backgroundColor: Colors.transparent,
+        hoverColor: const Color(0xFFF1F5F9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+    return button;
   }
 }
 
@@ -46,20 +80,38 @@ class SoftCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(24),
     this.borderRadius = 24,
+    this.backgroundColor = AppTheme.surface,
+    this.withShadow = true,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double borderRadius;
+  final Color backgroundColor;
+  final bool withShadow;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        border: Border.all(color: const Color(0xFFEEF2F7)),
+        color: backgroundColor,
+        border: Border.all(color: const Color(0x99E2E8F0)),
         borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: withShadow
+            ? const [
+                BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 30,
+                  offset: Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Color(0x05000000),
+                  blurRadius: 3,
+                  offset: Offset(0, 1),
+                ),
+              ]
+            : null,
       ),
       child: child,
     );

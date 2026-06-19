@@ -95,10 +95,8 @@ class _AppShellState extends State<AppShell> {
     }
 
     final state = _desktopWidgetController.state;
-    final workHours = _localDataState.config.dailyWorkHours <= 0
-        ? 8.0
-        : _localDataState.config.dailyWorkHours;
-    final progress = (state.workSeconds / (workHours * 3600)).clamp(0.0, 1.0);
+    final progress = (_levelProgressController.state.experiencePercent / 100)
+        .clamp(0.0, 1.0);
     unawaited(
       _desktopWidgetWindow.showOrUpdate(
         DesktopWidgetWindowSnapshot(
@@ -191,11 +189,11 @@ class GlobalSidebar extends StatelessWidget {
     return Container(
       width: 80,
       color: AppTheme.sidebar,
-      padding: const EdgeInsets.symmetric(vertical: 22),
+      padding: const EdgeInsets.symmetric(vertical: 28),
       child: Column(
         children: [
           _SidebarButton(
-            icon: Icons.home_rounded,
+            icon: Icons.dashboard_outlined,
             tooltip: '首页',
             selected: selectedSection == AppSection.home,
             onPressed: () => onSectionSelected(AppSection.home),
@@ -209,7 +207,7 @@ class GlobalSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _SidebarButton(
-            icon: Icons.auto_stories_outlined,
+            icon: Icons.menu_book_outlined,
             tooltip: '回忆书',
             selected: selectedSection == AppSection.memory,
             onPressed: () => onSectionSelected(AppSection.memory),
@@ -254,13 +252,13 @@ class _SidebarButton extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: selected ? AppTheme.surfaceMuted : Colors.transparent,
+            color: selected ? const Color(0xCCF1F5F9) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
             size: 20,
-            color: selected ? AppTheme.text : AppTheme.textMuted,
+            color: selected ? AppTheme.text : const Color(0xFF94A3B8),
           ),
         ),
       ),

@@ -229,18 +229,11 @@ void DesktopWidgetWindow::Paint() {
 
   RECT header_rect{16, 14, kWindowWidth - 16, 32};
   std::wstringstream header_stream;
-  header_stream << L"Lv." << state_.level << L" \u5b9e\u4e60\u751f \u00b7 "
-                << (state_.running ? L"\u5de5\u4f5c\u4e2d"
-                                   : L"\u5df2\u6682\u505c");
+  header_stream << L"Lv." << state_.level << L" \u5b9e\u4e60\u751f ("
+                << state_.experience_percent << L"%)";
   DrawTextLine(memory_dc, header_stream.str(), header_rect, 14, FW_SEMIBOLD,
                RGB(100, 116, 139),
                DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
-
-  std::wstringstream experience_stream;
-  experience_stream << L"EXP " << state_.experience_percent << L"%";
-  RECT experience_rect{180, 14, kWindowWidth - 16, 32};
-  DrawTextLine(memory_dc, experience_stream.str(), experience_rect, 12,
-               FW_SEMIBOLD, RGB(148, 163, 184), DT_RIGHT | DT_SINGLELINE);
 
   RECT track{16, 39, kWindowWidth - 16, 41};
   FillRoundRect(memory_dc, track, 2, RGB(241, 245, 249));
@@ -260,8 +253,9 @@ void DesktopWidgetWindow::Paint() {
 
   std::wstringstream rate_stream;
   rate_stream << L"+" << std::fixed << std::setprecision(3)
-              << (state_.running ? state_.coin_rate_per_second : 0.0) << L"/s";
-  RECT rate_rect{16, 112, 122, 130};
+              << (state_.running ? state_.coin_rate_per_second : 0.0)
+              << L" coin/s";
+  RECT rate_rect{16, 112, 140, 130};
   DrawTextLine(memory_dc, rate_stream.str(), rate_rect, 14, FW_BOLD,
                RGB(16, 185, 129), DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
 

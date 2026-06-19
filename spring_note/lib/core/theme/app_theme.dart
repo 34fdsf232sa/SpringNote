@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppTheme {
   const AppTheme._();
 
-  static const Color background = Color(0xFFF8FAFC);
+  static const Color background = Color(0xFFFCFCFD);
   static const Color sidebar = Color(0xFFFCFCFD);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceMuted = Color(0xFFF1F5F9);
@@ -45,6 +45,7 @@ class AppTheme {
           color: text,
           fontSize: 18,
           fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
           height: 1.35,
         ),
         titleMedium: TextStyle(
@@ -63,7 +64,7 @@ class AppTheme {
           color: textMuted,
           fontSize: 13,
           fontWeight: FontWeight.w400,
-          height: 1.6,
+          height: 1.55,
         ),
         labelLarge: TextStyle(
           color: text,

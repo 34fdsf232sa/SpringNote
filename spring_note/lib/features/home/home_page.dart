@@ -163,7 +163,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadHomeStats() async {
     final today = DateTime.now();
-    final activityStart = today.subtract(const Duration(days: 97));
+    final activityStart = today.subtract(const Duration(days: 139));
     final results = await Future.wait([
       widget.statsService.readSnapshot(
         localDataState: widget.localDataState,
@@ -293,14 +293,14 @@ class _HomePageState extends State<HomePage> {
     return SpringNotePageScaffold(
       title: '首页',
       actions: [
-        IconButton(
+        SpringNoteIconButton(
           tooltip: '更多',
           onPressed: () {},
-          icon: const Icon(Icons.more_horiz_rounded),
+          icon: Icons.more_horiz,
         ),
       ],
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+        padding: const EdgeInsets.fromLTRB(48, 24, 48, 40),
         children: [
           _TodayHeroCard(
             todayStats: _todayStats,
@@ -309,14 +309,14 @@ class _HomePageState extends State<HomePage> {
             coinRatePerSecond: _desktopWidgetController.coinRatePerSecond,
             levelProgressState: _levelProgressController.state,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
           _QuickCaptureCard(
             controller: _controller,
             focusNode: _focusNode,
             isSubmitting: _isSubmitting,
             onSubmit: _submit,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
           _OverviewGrid(overview: _overview),
           if (_lastSavedPath != null) ...[
             const SizedBox(height: 16),
@@ -350,24 +350,24 @@ class _TodayHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SoftCard(
-      padding: const EdgeInsets.all(30),
+      padding: const EdgeInsets.all(32),
       borderRadius: 26,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final narrow = constraints.maxWidth < 820;
+          final narrow = constraints.maxWidth < 860;
 
           if (narrow) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _IncomeSummary(
-                  stats: todayStats,
                   desktopWidgetState: desktopWidgetState,
                   coinRatePerSecond: coinRatePerSecond,
                   levelProgressState: levelProgressState,
+                  totalCoins: activityStats.summary.coins,
                 ),
                 const SizedBox(height: 28),
-                _ActivityPreview(stats: activityStats),
+                _ActivityPreview(stats: activityStats, withDivider: false),
               ],
             );
           }
@@ -377,19 +377,14 @@ class _TodayHeroCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _IncomeSummary(
-                  stats: todayStats,
                   desktopWidgetState: desktopWidgetState,
                   coinRatePerSecond: coinRatePerSecond,
                   levelProgressState: levelProgressState,
+                  totalCoins: activityStats.summary.coins,
                 ),
               ),
-              const SizedBox(width: 36),
-              const SizedBox(
-                height: 118,
-                child: VerticalDivider(color: Color(0xFFF1F5F9)),
-              ),
-              const SizedBox(width: 36),
-              Expanded(child: _ActivityPreview(stats: activityStats)),
+              const SizedBox(width: 48),
+              _ActivityPreview(stats: activityStats),
             ],
           );
         },
@@ -400,16 +395,16 @@ class _TodayHeroCard extends StatelessWidget {
 
 class _IncomeSummary extends StatelessWidget {
   const _IncomeSummary({
-    required this.stats,
     required this.desktopWidgetState,
     required this.coinRatePerSecond,
     required this.levelProgressState,
+    required this.totalCoins,
   });
 
-  final rust_stats.StatsSnapshot stats;
   final DesktopWidgetState desktopWidgetState;
   final double coinRatePerSecond;
   final LevelProgressState levelProgressState;
+  final double totalCoins;
 
   @override
   Widget build(BuildContext context) {
@@ -420,107 +415,212 @@ class _IncomeSummary extends StatelessWidget {
     final progressLabel = '${levelProgressState.experiencePercent}%';
     final coins = desktopWidgetState.coins;
     final rate = desktopWidgetState.running ? coinRatePerSecond : 0.0;
+    final visibleTotalCoins = totalCoins > coins ? totalCoins : coins;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SizedBox(
-          width: 74,
-          height: 74,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: progress,
-                strokeWidth: 5,
-                backgroundColor: const Color(0xFFEFF6FF),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'LEVEL ${levelProgressState.level.toString().padLeft(2, '0')}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: const Color(0xFF3B82F6),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1,
               ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 64,
+              height: 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: const Size.square(64),
+                    painter: _LevelRingPainter(progress: progress),
+                  ),
+                  Text(
+                    progressLabel,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: const Color(0xFF2563EB),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 48),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                progressLabel,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: const Color(0xFF2563EB),
+                'EARNINGS TODAY',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF94A3B8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Flexible(
+                    child: Text(
+                      coins.round().toString(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            fontSize: 56,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: -3.2,
+                            height: 1,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 7),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.trending_up_rounded,
+                            size: 12,
+                            color: Color(0xFF059669),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '+${_formatRate(rate)} c/s',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: const Color(0xFF059669),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text.rich(
+                TextSpan(
+                  text: '累计总收益 ',
+                  children: [
+                    TextSpan(
+                      text: _formatCoinAmount(visibleTotalCoins),
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const TextSpan(text: ' coins'),
+                  ],
+                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF94A3B8),
+                  fontSize: 12,
+                  letterSpacing: 0.1,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 28),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('今日收益', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'LEVEL ${levelProgressState.level.toString().padLeft(2, '0')} · EXP ${levelProgressState.experiencePercent}%',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF3B82F6),
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.1,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  coins.round().toString(),
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontSize: 56,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -2,
-                    height: 0.95,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '+${rate.toStringAsFixed(3)} c/s',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF059669),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_formatWorkDuration(desktopWidgetState.workSeconds)} · 今日有效 ${levelProgressState.todayValidSubmissions}/10 次',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
       ],
     );
   }
 
-  String _formatWorkDuration(int seconds) {
-    if (seconds <= 0) {
-      return '尚未记录工作时长';
+  String _formatRate(double value) {
+    return value.abs() < 1
+        ? value.toStringAsFixed(2)
+        : value.toStringAsFixed(3);
+  }
+
+  String _formatCoinAmount(double value) {
+    final text = value.round().toString();
+    final buffer = StringBuffer();
+    for (var index = 0; index < text.length; index++) {
+      if (index > 0 && (text.length - index) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(text[index]);
     }
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    if (hours > 0) {
-      return '已工作 ${hours}h ${minutes}m';
-    }
-    return '已工作 ${minutes}m';
+    return buffer.toString();
+  }
+}
+
+class _LevelRingPainter extends CustomPainter {
+  const _LevelRingPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final backgroundPaint = Paint()
+      ..color = const Color(0xFFEFF6FF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.5
+      ..strokeCap = StrokeCap.round;
+    final progressPaint = Paint()
+      ..color = const Color(0xFF3B82F6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.5
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      rect.deflate(4),
+      0,
+      6.283185307179586,
+      false,
+      backgroundPaint,
+    );
+    canvas.drawArc(
+      rect.deflate(4),
+      -1.5707963267948966,
+      6.283185307179586 * progress,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _LevelRingPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 
 class _ActivityPreview extends StatelessWidget {
-  const _ActivityPreview({required this.stats});
+  const _ActivityPreview({required this.stats, this.withDivider = true});
 
   final rust_stats.StatsSnapshot stats;
+  final bool withDivider;
 
   static const _colors = [
     Color(0xFFF1F5F9),
@@ -541,7 +641,7 @@ class _ActivityPreview extends StatelessWidget {
       return activityByDate[StatsService.formatDate(date)] ?? 0;
     }).fold<int>(0, (sum, count) => sum + count);
     final streak = _calculateStreak(today, activityByDate);
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -550,45 +650,64 @@ class _ActivityPreview extends StatelessWidget {
               'ACTIVITY INPUT',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppTheme.textSubtle,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.1,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 1,
               ),
             ),
             const Spacer(),
             Text(
               '最近活跃',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF10B981)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF10B981),
+                fontSize: 11,
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: List.generate(98, (index) {
-            final date = today.subtract(Duration(days: 97 - index));
-            final dateLabel = StatsService.formatDate(date);
-            final count = activityByDate[dateLabel] ?? 0;
-            final color = _colors[_activityLevel(count)];
-            return Tooltip(
-              message: '$dateLabel：$count 次记录',
-              child: _HeatCell(color: color),
-            );
-          }),
+        const SizedBox(height: 12),
+        _ActivityHeatmap(
+          today: today,
+          activityByDate: activityByDate,
+          colors: _colors,
+          activityLevel: _activityLevel,
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 22,
-          runSpacing: 8,
-          children: [
-            _ActivityMetric(label: '本周新增', value: '$weekCount 次'),
-            _ActivityMetric(label: '连续记录', value: '$streak 天'),
-            _ActivityMetric(label: '上次同步', value: '刚刚'),
-          ],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ActivityMetric(label: '本周新增', value: '$weekCount 篇'),
+                const SizedBox(width: 24),
+                _ActivityMetric(label: '连续记录', value: '$streak 天'),
+                const SizedBox(width: 24),
+                const _ActivityMetric(
+                  label: '上次同步',
+                  value: '刚刚',
+                  valueColor: Color(0xFF64748B),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
+    );
+
+    if (!withDivider) {
+      return content;
+    }
+
+    return Container(
+      width: 392,
+      padding: const EdgeInsets.only(left: 32),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Color(0xFFF1F5F9))),
+      ),
+      child: content,
     );
   }
 
@@ -623,10 +742,15 @@ class _ActivityPreview extends StatelessWidget {
 }
 
 class _ActivityMetric extends StatelessWidget {
-  const _ActivityMetric({required this.label, required this.value});
+  const _ActivityMetric({
+    required this.label,
+    required this.value,
+    this.valueColor = const Color(0xFF334155),
+  });
 
   final String label;
   final String value;
+  final Color valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -636,31 +760,203 @@ class _ActivityMetric extends StatelessWidget {
         children: [
           TextSpan(
             text: value,
-            style: const TextStyle(
-              color: AppTheme.text,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: valueColor, fontWeight: FontWeight.w600),
           ),
         ],
       ),
-      style: Theme.of(context).textTheme.bodyMedium,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: AppTheme.textSubtle,
+        fontSize: 12,
+      ),
     );
   }
 }
 
-class _HeatCell extends StatelessWidget {
-  const _HeatCell({required this.color});
+class _ActivityHeatmap extends StatelessWidget {
+  const _ActivityHeatmap({
+    required this.today,
+    required this.activityByDate,
+    required this.colors,
+    required this.activityLevel,
+  });
 
-  final Color color;
+  static const _dayCount = 140;
+  static const _rowCount = 7;
+
+  final DateTime today;
+  final Map<String, int> activityByDate;
+  final List<Color> colors;
+  final int Function(int count) activityLevel;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(3),
+    final start = today.subtract(const Duration(days: _dayCount - 1));
+    final columns = (_dayCount / _rowCount).ceil();
+
+    return SizedBox(
+      width: 317,
+      height: (_rowCount * 13) + ((_rowCount - 1) * 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(columns, (columnIndex) {
+          return Padding(
+            padding: EdgeInsets.only(right: columnIndex == columns - 1 ? 0 : 3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(_rowCount, (rowIndex) {
+                final dayIndex = columnIndex * _rowCount + rowIndex;
+                if (dayIndex >= _dayCount) {
+                  return const SizedBox(width: 13, height: 13);
+                }
+                final date = start.add(Duration(days: dayIndex));
+                final dateLabel = StatsService.formatDate(date);
+                final count = activityByDate[dateLabel] ?? 0;
+                final color = colors[activityLevel(count)];
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: rowIndex == _rowCount - 1 ? 0 : 3,
+                  ),
+                  child: _HeatCell(
+                    color: color,
+                    count: count,
+                    dateLabel: dateLabel,
+                    delay: Duration(milliseconds: 300 + dayIndex * 4),
+                  ),
+                );
+              }),
+            ),
+          );
+        }),
       ),
-      child: const SizedBox(width: 12, height: 12),
+    );
+  }
+}
+
+class _HeatCell extends StatefulWidget {
+  const _HeatCell({
+    required this.color,
+    required this.count,
+    required this.dateLabel,
+    required this.delay,
+  });
+
+  final Color color;
+  final int count;
+  final String dateLabel;
+  final Duration delay;
+
+  @override
+  State<_HeatCell> createState() => _HeatCellState();
+}
+
+class _HeatCellState extends State<_HeatCell> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final delayMs = widget.delay.inMilliseconds;
+    final totalMs = delayMs + 300;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: totalMs),
+      builder: (context, value, child) {
+        final elapsed = value * totalMs;
+        final delayedProgress = ((elapsed - delayMs) / 300).clamp(0.0, 1.0);
+        final eased = Curves.easeOutCubic.transform(delayedProgress);
+        return Opacity(
+          opacity: eased,
+          child: Transform.scale(scale: 0.4 + 0.6 * eased, child: child),
+        );
+      },
+      child: Tooltip(
+        richMessage: _tooltipMessage(),
+        preferBelow: false,
+        verticalOffset: 12,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: AnimatedScale(
+            scale: _hovered ? 1.1 : 1,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: widget.color,
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+              child: const SizedBox(width: 13, height: 13),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  InlineSpan _tooltipMessage() {
+    const baseStyle = TextStyle(
+      color: Color(0xFF1E293B),
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      height: 1.2,
+    );
+
+    if (widget.count == 0) {
+      return TextSpan(
+        style: baseStyle,
+        children: [
+          const TextSpan(
+            text: 'No contributions on ',
+            style: TextStyle(color: AppTheme.textSubtle),
+          ),
+          TextSpan(
+            text: widget.dateLabel,
+            style: const TextStyle(
+              color: Color(0xFF475569),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return TextSpan(
+      style: baseStyle,
+      children: [
+        TextSpan(
+          text: '${widget.count} ${widget.count == 1 ? 'commit' : 'commits'}',
+          style: const TextStyle(
+            color: AppTheme.text,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const TextSpan(
+          text: ' on ',
+          style: TextStyle(color: AppTheme.textSubtle),
+        ),
+        TextSpan(
+          text: widget.dateLabel,
+          style: const TextStyle(
+            color: Color(0xFF475569),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -680,9 +976,26 @@ class _QuickCaptureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SoftCard(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-      borderRadius: 22,
+    return AnimatedBuilder(
+      animation: focusNode,
+      builder: (context, child) {
+        final focused = focusNode.hasFocus;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: focused ? const Color(0xE6F8FAFC) : const Color(0x99F8FAFC),
+            border: Border.all(
+              color: focused
+                  ? const Color(0xCCCBD5E1)
+                  : const Color(0x99E2E8F0),
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: child,
+        );
+      },
       child: AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
@@ -692,69 +1005,124 @@ class _QuickCaptureCard extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: controller,
-                focusNode: focusNode,
-                enabled: !isSubmitting,
-                minLines: 3,
-                maxLines: 6,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  hintText: '写下你的想法，AI 将自动整理并生成结构化内容...',
-                  filled: true,
-                  fillColor: Color(0xFFF8FAFC),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
+              SizedBox(
+                height: 96,
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  enabled: !isSubmitting,
+                  expands: true,
+                  minLines: null,
+                  maxLines: null,
+                  textAlignVertical: TextAlignVertical.top,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: '写下你的想法，AI 将自动整理并生成结构化内容...',
+                    hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xCC94A3B8),
+                    ),
+                    hoverColor: Colors.transparent,
+                    focusColor: Colors.transparent,
+                    filled: false,
+                    fillColor: Colors.transparent,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF1E293B),
+                    fontSize: 14,
+                    height: 1.625,
+                  ),
                 ),
-                style: Theme.of(context).textTheme.bodyLarge,
               ),
-              const SizedBox(height: 12),
-              const Divider(color: Color(0xFFF1F5F9)),
-              Row(
-                children: [
-                  const _ToolIcon(icon: Icons.image_outlined, tooltip: '上传图片'),
-                  const SizedBox(width: 6),
-                  const _ToolIcon(
-                    icon: Icons.attach_file_rounded,
-                    tooltip: '添加文件',
-                  ),
-                  const SizedBox(width: 6),
-                  const _ToolIcon(
-                    icon: Icons.alternate_email_rounded,
-                    tooltip: '提及',
-                  ),
-                  const Spacer(),
-                  Text(
-                    '$characterCount 字',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(width: 14),
-                  FilledButton.icon(
-                    onPressed: canSubmit ? onSubmit : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.text,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFE2E8F0),
-                      disabledForegroundColor: AppTheme.textSubtle,
-                      minimumSize: const Size(118, 36),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
+              Container(
+                padding: const EdgeInsets.only(top: 8),
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: Color(0x80F1F5F9))),
+                ),
+                child: Row(
+                  children: [
+                    const _ToolIcon(type: _ToolIconType.image, tooltip: '上传图片'),
+                    const SizedBox(width: 4),
+                    const _ToolIcon(
+                      type: _ToolIconType.paperclip,
+                      tooltip: '添加文件',
+                    ),
+                    const SizedBox(width: 4),
+                    const _ToolIcon(
+                      type: _ToolIconType.atSign,
+                      tooltip: '提及功能',
+                    ),
+                    const Spacer(),
+                    Text(
+                      '$characterCount 字',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSubtle,
+                        fontSize: 12,
                       ),
                     ),
-                    icon: isSubmitting
-                        ? const SizedBox(
-                            width: 13,
-                            height: 13,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                    const SizedBox(width: 16),
+                    FilledButton(
+                      onPressed: canSubmit ? onSubmit : null,
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                          (states) {
+                            if (states.contains(WidgetState.hovered)) {
+                              return const Color(0xFF1E293B);
+                            }
+                            return AppTheme.text;
+                          },
+                        ),
+                        foregroundColor: const WidgetStatePropertyAll(
+                          Colors.white,
+                        ),
+                        overlayColor: const WidgetStatePropertyAll(
+                          Colors.transparent,
+                        ),
+                        minimumSize: const WidgetStatePropertyAll(Size(0, 30)),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        elevation: const WidgetStatePropertyAll(1),
+                        shadowColor: const WidgetStatePropertyAll(
+                          Color(0x1A000000),
+                        ),
+                        padding: const WidgetStatePropertyAll(
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        ),
+                        shape: WidgetStatePropertyAll(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        textStyle: const WidgetStatePropertyAll(
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(isSubmitting ? '整理中' : '智能生成'),
+                          const SizedBox(width: 6),
+                          if (isSubmitting)
+                            const SizedBox(
+                              width: 13,
+                              height: 13,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          else
+                            const _LucideSparklesIcon(
+                              size: 12,
+                              color: Color(0xFF34D399),
                             ),
-                          )
-                        : const Icon(Icons.auto_awesome_rounded, size: 15),
-                    label: Text(isSubmitting ? '整理中' : '智能生成'),
-                  ),
-                ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           );
@@ -764,30 +1132,340 @@ class _QuickCaptureCard extends StatelessWidget {
   }
 }
 
-class _ToolIcon extends StatelessWidget {
-  const _ToolIcon({required this.icon, required this.tooltip});
+enum _ToolIconType { image, paperclip, atSign }
 
-  final IconData icon;
+class _ToolIcon extends StatefulWidget {
+  const _ToolIcon({required this.type, required this.tooltip});
+
+  final _ToolIconType type;
   final String tooltip;
+
+  @override
+  State<_ToolIcon> createState() => _ToolIconState();
+}
+
+class _ToolIconState extends State<_ToolIcon> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: tooltip,
-      child: IconButton(
-        onPressed: null,
-        icon: Icon(icon),
-        color: AppTheme.textSubtle,
-        disabledColor: AppTheme.textSubtle,
-        iconSize: 18,
-        style: IconButton.styleFrom(
-          backgroundColor: const Color(0xFFF8FAFC),
-          shape: RoundedRectangleBorder(
+      message: widget.tooltip,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: _hovered ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: _LucideToolbarIcon(
+              type: widget.type,
+              size: 16,
+              color: _hovered ? const Color(0xFF475569) : AppTheme.textSubtle,
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _LucideToolbarIcon extends StatelessWidget {
+  const _LucideToolbarIcon({
+    required this.type,
+    required this.size,
+    required this.color,
+  });
+
+  final _ToolIconType type;
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.square(size),
+      painter: _LucideToolbarPainter(type: type, color: color),
+    );
+  }
+}
+
+class _LucideToolbarPainter extends CustomPainter {
+  const _LucideToolbarPainter({required this.type, required this.color});
+
+  final _ToolIconType type;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 24;
+    final sy = size.height / 24;
+    final strokeScale = sx < sy ? sx : sy;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * strokeScale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    Offset point(double x, double y) => Offset(x * sx, y * sy);
+
+    switch (type) {
+      case _ToolIconType.image:
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(3 * sx, 3 * sy, 18 * sx, 18 * sy),
+            Radius.circular(2 * sx),
+          ),
+          paint,
+        );
+        canvas.drawCircle(point(9, 9), 2 * sx, paint);
+        final imagePath = Path()
+          ..moveTo(21 * sx, 15 * sy)
+          ..lineTo(17.914 * sx, 11.914 * sy)
+          ..cubicTo(
+            17.133 * sx,
+            11.133 * sy,
+            15.867 * sx,
+            11.133 * sy,
+            15.086 * sx,
+            11.914 * sy,
+          )
+          ..lineTo(6 * sx, 21 * sy);
+        canvas.drawPath(imagePath, paint);
+        break;
+      case _ToolIconType.paperclip:
+        final paperclipPath = Path()
+          ..moveTo(16 * sx, 6 * sy)
+          ..lineTo(7.586 * sx, 14.586 * sy)
+          ..cubicTo(
+            6.805 * sx,
+            15.367 * sy,
+            6.805 * sx,
+            16.633 * sy,
+            7.586 * sx,
+            17.414 * sy,
+          )
+          ..cubicTo(
+            8.367 * sx,
+            18.195 * sy,
+            9.633 * sx,
+            18.195 * sy,
+            10.414 * sx,
+            17.414 * sy,
+          )
+          ..lineTo(18.828 * sx, 8.828 * sy)
+          ..cubicTo(
+            20.39 * sx,
+            7.266 * sy,
+            20.39 * sx,
+            4.734 * sy,
+            18.828 * sx,
+            3.172 * sy,
+          )
+          ..cubicTo(
+            17.266 * sx,
+            1.61 * sy,
+            14.734 * sx,
+            1.61 * sy,
+            13.172 * sx,
+            3.172 * sy,
+          )
+          ..lineTo(4.793 * sx, 11.723 * sy)
+          ..cubicTo(
+            2.45 * sx,
+            14.066 * sy,
+            2.45 * sx,
+            17.864 * sy,
+            4.793 * sx,
+            20.207 * sy,
+          )
+          ..cubicTo(
+            7.136 * sx,
+            22.55 * sy,
+            10.934 * sx,
+            22.55 * sy,
+            13.277 * sx,
+            20.207 * sy,
+          )
+          ..lineTo(21.656 * sx, 11.656 * sy);
+        canvas.drawPath(paperclipPath, paint);
+        break;
+      case _ToolIconType.atSign:
+        canvas.drawCircle(point(12, 12), 4 * sx, paint);
+        final atPath = Path()
+          ..moveTo(16 * sx, 8 * sy)
+          ..lineTo(16 * sx, 13 * sy)
+          ..cubicTo(
+            16 * sx,
+            14.657 * sy,
+            17.343 * sx,
+            16 * sy,
+            19 * sx,
+            16 * sy,
+          )
+          ..cubicTo(
+            20.657 * sx,
+            16 * sy,
+            22 * sx,
+            14.657 * sy,
+            22 * sx,
+            13 * sy,
+          )
+          ..lineTo(22 * sx, 12 * sy)
+          ..cubicTo(22 * sx, 6.477 * sy, 17.523 * sx, 2 * sy, 12 * sx, 2 * sy)
+          ..cubicTo(6.477 * sx, 2 * sy, 2 * sx, 6.477 * sy, 2 * sx, 12 * sy)
+          ..cubicTo(2 * sx, 17.523 * sy, 6.477 * sx, 22 * sy, 12 * sx, 22 * sy)
+          ..cubicTo(
+            14.197 * sx,
+            22 * sy,
+            16.224 * sx,
+            21.294 * sy,
+            17.875 * sx,
+            20.097 * sy,
+          );
+        canvas.drawPath(atPath, paint);
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LucideToolbarPainter oldDelegate) {
+    return oldDelegate.type != type || oldDelegate.color != color;
+  }
+}
+
+class _LucideSparklesIcon extends StatelessWidget {
+  const _LucideSparklesIcon({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.square(size),
+      painter: _LucideSparklesPainter(color: color),
+    );
+  }
+}
+
+class _LucideSparklesPainter extends CustomPainter {
+  const _LucideSparklesPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scaleX = size.width / 24;
+    final scaleY = size.height / 24;
+    final strokeScale = scaleX < scaleY ? scaleX : scaleY;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * strokeScale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    Path scaledPath(List<Offset> points) {
+      final path = Path()
+        ..moveTo(points.first.dx * scaleX, points.first.dy * scaleY);
+      for (final point in points.skip(1)) {
+        path.lineTo(point.dx * scaleX, point.dy * scaleY);
+      }
+      return path;
+    }
+
+    final sparkle = Path()
+      ..moveTo(11.017 * scaleX, 2.814 * scaleY)
+      ..cubicTo(
+        11.199 * scaleX,
+        1.852 * scaleY,
+        12.801 * scaleX,
+        1.852 * scaleY,
+        12.983 * scaleX,
+        2.814 * scaleY,
+      )
+      ..lineTo(14.034 * scaleX, 8.372 * scaleY)
+      ..cubicTo(
+        14.184 * scaleX,
+        9.165 * scaleY,
+        14.835 * scaleX,
+        9.816 * scaleY,
+        15.628 * scaleX,
+        9.966 * scaleY,
+      )
+      ..lineTo(21.186 * scaleX, 11.017 * scaleY)
+      ..cubicTo(
+        22.148 * scaleX,
+        11.199 * scaleY,
+        22.148 * scaleX,
+        12.801 * scaleY,
+        21.186 * scaleX,
+        12.983 * scaleY,
+      )
+      ..lineTo(15.628 * scaleX, 14.034 * scaleY)
+      ..cubicTo(
+        14.835 * scaleX,
+        14.184 * scaleY,
+        14.184 * scaleX,
+        14.835 * scaleY,
+        14.034 * scaleX,
+        15.628 * scaleY,
+      )
+      ..lineTo(12.983 * scaleX, 21.186 * scaleY)
+      ..cubicTo(
+        12.801 * scaleX,
+        22.148 * scaleY,
+        11.199 * scaleX,
+        22.148 * scaleY,
+        11.017 * scaleX,
+        21.186 * scaleY,
+      )
+      ..lineTo(9.966 * scaleX, 15.628 * scaleY)
+      ..cubicTo(
+        9.816 * scaleX,
+        14.835 * scaleY,
+        9.165 * scaleX,
+        14.184 * scaleY,
+        8.372 * scaleX,
+        14.034 * scaleY,
+      )
+      ..lineTo(2.814 * scaleX, 12.983 * scaleY)
+      ..cubicTo(
+        1.852 * scaleX,
+        12.801 * scaleY,
+        1.852 * scaleX,
+        11.199 * scaleY,
+        2.814 * scaleX,
+        11.017 * scaleY,
+      )
+      ..lineTo(8.372 * scaleX, 9.966 * scaleY)
+      ..cubicTo(
+        9.165 * scaleX,
+        9.816 * scaleY,
+        9.816 * scaleX,
+        9.165 * scaleY,
+        9.966 * scaleX,
+        8.372 * scaleY,
+      )
+      ..close();
+
+    canvas.drawPath(sparkle, paint);
+    canvas.drawPath(scaledPath(const [Offset(20, 2), Offset(20, 6)]), paint);
+    canvas.drawPath(scaledPath(const [Offset(22, 4), Offset(18, 4)]), paint);
+    canvas.drawCircle(Offset(4 * scaleX, 20 * scaleY), 2 * scaleX, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LucideSparklesPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
 
@@ -801,24 +1479,21 @@ class _OverviewGrid extends StatelessWidget {
     final cards = [
       _OverviewCard(
         eyebrow: 'Completed · 完成事项',
-        title: '完成事项',
         accentColor: AppTheme.textSubtle,
         items: overview.completed,
-        emptyText: '提交随手记录后显示完成事项',
+        emptyText: '完成事项',
       ),
       _OverviewCard(
         eyebrow: 'Issues · 问题记录',
-        title: '问题记录',
         accentColor: const Color(0xFFF87171),
         items: overview.issues,
-        emptyText: '提交随手记录后显示问题记录',
+        emptyText: '问题记录',
       ),
       _OverviewCard(
         eyebrow: 'Next Steps · 明日计划',
-        title: '明日计划',
         accentColor: AppTheme.textSubtle,
         items: overview.plans,
-        emptyText: '提交随手记录后显示明日计划',
+        emptyText: '明日计划',
       ),
     ];
 
@@ -843,9 +1518,9 @@ class _OverviewGrid extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: cards[0]),
-            const SizedBox(width: 16),
+            const SizedBox(width: 24),
             Expanded(child: cards[1]),
-            const SizedBox(width: 16),
+            const SizedBox(width: 24),
             Expanded(child: cards[2]),
           ],
         );
@@ -857,88 +1532,98 @@ class _OverviewGrid extends StatelessWidget {
 class _OverviewCard extends StatelessWidget {
   const _OverviewCard({
     required this.eyebrow,
-    required this.title,
     required this.accentColor,
     required this.items,
     required this.emptyText,
   });
 
   final String eyebrow;
-  final String title;
   final Color accentColor;
   final List<String> items;
   final String emptyText;
 
   @override
   Widget build(BuildContext context) {
-    final visibleItems = items.take(3).toList();
+    final visibleItems = items.take(2).toList();
+    final lineTexts = [
+      if (visibleItems.isEmpty) emptyText else visibleItems[0],
+      if (visibleItems.length > 1) visibleItems[1] else '',
+    ];
 
     return SoftCard(
-      padding: const EdgeInsets.all(26),
-      borderRadius: 22,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(28),
+      borderRadius: 16,
+      withShadow: false,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      eyebrow,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: accentColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.9,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    if (visibleItems.isEmpty)
-                      Text(
-                        emptyText,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      )
-                    else
-                      for (final item in visibleItems)
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: accentColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 36,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var index = 0; index < 2; index++)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 7),
-                          child: Text(
-                            item,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: visibleItems.first == item
-                                      ? AppTheme.text
-                                      : AppTheme.textMuted,
+                          padding: EdgeInsets.only(bottom: index == 0 ? 4 : 0),
+                          child: lineTexts[index].isEmpty
+                              ? const SizedBox(width: 180, height: 16)
+                              : ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 180,
+                                  ),
+                                  child: Text(
+                                    lineTexts[index],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: index == 0
+                                              ? const Color(0xFF475569)
+                                              : AppTheme.textSubtle,
+                                          fontSize: 12,
+                                          height: 1.333,
+                                        ),
+                                  ),
                                 ),
-                          ),
                         ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 18),
-              Text(
-                items.length.toString().padLeft(2, '0'),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1.2,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(width: 18),
           Text(
-            visibleItems.length < items.length
-                ? '还有 ${items.length - visibleItems.length} 条'
-                : title,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSubtle),
+            items.length.toString().padLeft(2, '0'),
+            style: const TextStyle(
+              color: AppTheme.text,
+              fontSize: 36,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.9,
+              height: 1,
+              fontFamily: 'monospace',
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
           ),
         ],
       ),
