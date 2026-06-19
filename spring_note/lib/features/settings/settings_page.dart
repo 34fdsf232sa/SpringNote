@@ -259,9 +259,7 @@ class _SettingsNavItemState extends State<_SettingsNavItem> {
     final contentColor = active ? AppTheme.text : AppTheme.textMuted;
     final backgroundColor = widget.selected
         ? const Color(0xCCF1F5F9)
-        : _hovered
-        ? const Color(0x99F1F5F9)
-        : Colors.transparent;
+        : const Color(0x99F1F5F9);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -272,28 +270,43 @@ class _SettingsNavItemState extends State<_SettingsNavItem> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
-          child: Container(
+          child: SizedBox(
             height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+            child: Stack(
               children: [
-                _SettingsNavLucideIcon(
-                  type: widget.section.icon,
-                  size: 15,
-                  color: contentColor,
+                Positioned.fill(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 120),
+                    curve: Curves.easeOutCubic,
+                    opacity: active ? 1 : 0,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: backgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 9),
-                Text(
-                  widget.section.label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: contentColor,
-                    fontWeight: widget.selected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      _SettingsNavLucideIcon(
+                        type: widget.section.icon,
+                        size: 15,
+                        color: contentColor,
+                      ),
+                      const SizedBox(width: 9),
+                      Text(
+                        widget.section.label,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: contentColor,
+                          fontWeight: widget.selected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -327,9 +340,8 @@ class _ProviderListItemState extends State<_ProviderListItem> {
   Widget build(BuildContext context) {
     final backgroundColor = widget.selected
         ? const Color(0xE6F1F5F9)
-        : _hovered
-        ? const Color(0xFFF8FAFC)
-        : Colors.transparent;
+        : const Color(0xFFF8FAFC);
+    final active = widget.selected || _hovered;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -338,30 +350,45 @@ class _ProviderListItemState extends State<_ProviderListItem> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: Container(
+        child: SizedBox(
           height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
+          child: Stack(
             children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: const Color(0xFFEFF6FF),
-                child: Text(
-                  widget.provider.name.characters.first.toUpperCase(),
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.easeOutCubic,
+                  opacity: active ? 1 : 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  widget.provider.name,
-                  overflow: TextOverflow.ellipsis,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: const Color(0xFFEFF6FF),
+                      child: Text(
+                        widget.provider.name.characters.first.toUpperCase(),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.provider.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    _StatusPill(enabled: widget.provider.enabled),
+                  ],
                 ),
               ),
-              _StatusPill(enabled: widget.provider.enabled),
             ],
           ),
         ),

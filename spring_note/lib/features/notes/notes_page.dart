@@ -646,9 +646,8 @@ class _NoteListItemState extends State<_NoteListItem> {
   Widget build(BuildContext context) {
     final backgroundColor = widget.selected
         ? const Color(0xFFF1F5F9).withValues(alpha: 0.8)
-        : _hovered
-        ? const Color(0xFFF8FAFC)
-        : Colors.transparent;
+        : const Color(0xFFF8FAFC);
+    final active = widget.selected || _hovered;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -657,56 +656,70 @@ class _NoteListItemState extends State<_NoteListItem> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.note.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: widget.selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                    ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 120),
+                curve: Curves.easeOutCubic,
+                opacity: active ? 1 : 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  const SizedBox(width: 8),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.note.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                fontWeight: widget.selected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatModified(widget.note.modifiedAt),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSubtle,
+                          fontSize: 11,
+                          fontFamily: 'Consolas',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
                   Text(
-                    _formatModified(widget.note.modifiedAt),
+                    widget.note.preview.isEmpty
+                        ? widget.note.name
+                        : widget.note.preview,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSubtle,
-                      fontSize: 11,
-                      fontFamily: 'Consolas',
+                      color: widget.selected
+                          ? AppTheme.textMuted
+                          : AppTheme.textSubtle,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 7),
-              Text(
-                widget.note.preview.isEmpty
-                    ? widget.note.name
-                    : widget.note.preview,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: widget.selected
-                      ? AppTheme.textMuted
-                      : AppTheme.textSubtle,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
