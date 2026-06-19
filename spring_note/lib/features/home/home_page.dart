@@ -772,7 +772,7 @@ class _ActivityMetric extends StatelessWidget {
   }
 }
 
-class _ActivityHeatmap extends StatelessWidget {
+class _ActivityHeatmap extends StatefulWidget {
   const _ActivityHeatmap({
     required this.today,
     required this.activityByDate,
@@ -789,73 +789,164 @@ class _ActivityHeatmap extends StatelessWidget {
   final int Function(int count) activityLevel;
 
   @override
-  Widget build(BuildContext context) {
-    final start = today.subtract(const Duration(days: _dayCount - 1));
-    final columns = (_dayCount / _rowCount).ceil();
+  State<_ActivityHeatmap> createState() => _ActivityHeatmapState();
+}
 
-    return SizedBox(
-      width: 317,
-      height: (_rowCount * 13) + ((_rowCount - 1) * 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: List.generate(columns, (columnIndex) {
-          return Padding(
-            padding: EdgeInsets.only(right: columnIndex == columns - 1 ? 0 : 3),
-            child: Column(
+class _ActivityHeatmapState extends State<_ActivityHeatmap> {
+  static const _cellSize = 13.0;
+  static const _gap = 3.0;
+
+  int? _hoveredDayIndex;
+
+  double get _pitch => _cellSize + _gap;
+  double get _heatmapHeight =>
+      (_ActivityHeatmap._rowCount * _cellSize) +
+      ((_ActivityHeatmap._rowCount - 1) * _gap);
+
+  @override
+  Widget build(BuildContext context) {
+    final start = widget.today.subtract(
+      const Duration(days: _ActivityHeatmap._dayCount - 1),
+    );
+    final columns = (_ActivityHeatmap._dayCount / _ActivityHeatmap._rowCount)
+        .ceil();
+    final width = (columns * _cellSize) + ((columns - 1) * _gap);
+
+    return MouseRegion(
+      cursor: _hoveredDayIndex == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
+      onHover: (event) => _updateHoveredIndex(event.localPosition, columns),
+      onExit: (_) => _clearHoveredIndex(),
+      child: SizedBox(
+        width: width,
+        height: _heatmapHeight,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Row(
               mainAxisSize: MainAxisSize.min,
-              children: List.generate(_rowCount, (rowIndex) {
-                final dayIndex = columnIndex * _rowCount + rowIndex;
-                if (dayIndex >= _dayCount) {
-                  return const SizedBox(width: 13, height: 13);
-                }
-                final date = start.add(Duration(days: dayIndex));
-                final dateLabel = StatsService.formatDate(date);
-                final count = activityByDate[dateLabel] ?? 0;
-                final color = colors[activityLevel(count)];
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(columns, (columnIndex) {
                 return Padding(
                   padding: EdgeInsets.only(
-                    bottom: rowIndex == _rowCount - 1 ? 0 : 3,
+                    right: columnIndex == columns - 1 ? 0 : _gap,
                   ),
-                  child: _HeatCell(
-                    color: color,
-                    count: count,
-                    dateLabel: dateLabel,
-                    delay: Duration(milliseconds: 300 + dayIndex * 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(_ActivityHeatmap._rowCount, (
+                      rowIndex,
+                    ) {
+                      final dayIndex =
+                          columnIndex * _ActivityHeatmap._rowCount + rowIndex;
+                      if (dayIndex >= _ActivityHeatmap._dayCount) {
+                        return const SizedBox(
+                          width: _cellSize,
+                          height: _cellSize,
+                        );
+                      }
+                      final date = start.add(Duration(days: dayIndex));
+                      final dateLabel = StatsService.formatDate(date);
+                      final count = widget.activityByDate[dateLabel] ?? 0;
+                      final color = widget.colors[widget.activityLevel(count)];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: rowIndex == _ActivityHeatmap._rowCount - 1
+                              ? 0
+                              : _gap,
+                        ),
+                        child: _HeatCell(
+                          color: color,
+                          hovered: _hoveredDayIndex == dayIndex,
+                          delay: Duration(milliseconds: 300 + dayIndex * 4),
+                        ),
+                      );
+                    }),
                   ),
                 );
               }),
             ),
-          );
-        }),
+            if (_hoveredDayIndex != null)
+              _buildTooltip(start, _hoveredDayIndex!),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _buildTooltip(DateTime start, int dayIndex) {
+    final date = start.add(Duration(days: dayIndex));
+    final dateLabel = StatsService.formatDate(date);
+    final count = widget.activityByDate[dateLabel] ?? 0;
+    final columnIndex = dayIndex ~/ _ActivityHeatmap._rowCount;
+    final rowIndex = dayIndex % _ActivityHeatmap._rowCount;
+    final cellLeft = columnIndex * _pitch;
+    final cellTop = rowIndex * _pitch;
+
+    return Positioned(
+      left: cellLeft + (_cellSize / 2),
+      bottom: _heatmapHeight - cellTop + 8,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, 0),
+        child: _HeatmapTooltip(count: count, dateLabel: dateLabel),
+      ),
+    );
+  }
+
+  void _updateHoveredIndex(Offset position, int columns) {
+    final nextIndex = _hitTestDayIndex(position, columns);
+    if (nextIndex == _hoveredDayIndex) {
+      return;
+    }
+    setState(() => _hoveredDayIndex = nextIndex);
+  }
+
+  void _clearHoveredIndex() {
+    if (_hoveredDayIndex == null) {
+      return;
+    }
+    setState(() => _hoveredDayIndex = null);
+  }
+
+  int? _hitTestDayIndex(Offset position, int columns) {
+    if (position.dx < 0 ||
+        position.dy < 0 ||
+        position.dx > (columns * _cellSize) + ((columns - 1) * _gap) ||
+        position.dy > _heatmapHeight) {
+      return null;
+    }
+
+    final columnIndex = (position.dx / _pitch).floor();
+    final rowIndex = (position.dy / _pitch).floor();
+    if (columnIndex < 0 ||
+        columnIndex >= columns ||
+        rowIndex < 0 ||
+        rowIndex >= _ActivityHeatmap._rowCount) {
+      return null;
+    }
+
+    final dayIndex = columnIndex * _ActivityHeatmap._rowCount + rowIndex;
+    if (dayIndex >= _ActivityHeatmap._dayCount) {
+      return null;
+    }
+    return dayIndex;
+  }
 }
 
-class _HeatCell extends StatefulWidget {
+class _HeatCell extends StatelessWidget {
   const _HeatCell({
     required this.color,
-    required this.count,
-    required this.dateLabel,
+    required this.hovered,
     required this.delay,
   });
 
   final Color color;
-  final int count;
-  final String dateLabel;
+  final bool hovered;
   final Duration delay;
 
   @override
-  State<_HeatCell> createState() => _HeatCellState();
-}
-
-class _HeatCellState extends State<_HeatCell> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final delayMs = widget.delay.inMilliseconds;
+    final delayMs = delay.inMilliseconds;
     final totalMs = delayMs + 300;
 
     return TweenAnimationBuilder<double>(
@@ -870,10 +961,32 @@ class _HeatCellState extends State<_HeatCell> {
           child: Transform.scale(scale: 0.4 + 0.6 * eased, child: child),
         );
       },
-      child: Tooltip(
-        richMessage: _tooltipMessage(),
-        preferBelow: false,
-        verticalOffset: 12,
+      child: AnimatedScale(
+        scale: hovered ? 1.1 : 1,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2.5),
+          ),
+          child: const SizedBox(width: 13, height: 13),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeatmapTooltip extends StatelessWidget {
+  const _HeatmapTooltip({required this.count, required this.dateLabel});
+
+  final int count;
+  final String dateLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -887,22 +1000,10 @@ class _HeatCellState extends State<_HeatCell> {
             ),
           ],
         ),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: AnimatedScale(
-            scale: _hovered ? 1.1 : 1,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: widget.color,
-                borderRadius: BorderRadius.circular(2.5),
-              ),
-              child: const SizedBox(width: 13, height: 13),
-            ),
-          ),
+        child: Text.rich(
+          _tooltipMessage(),
+          softWrap: false,
+          overflow: TextOverflow.visible,
         ),
       ),
     );
@@ -916,7 +1017,7 @@ class _HeatCellState extends State<_HeatCell> {
       height: 1.2,
     );
 
-    if (widget.count == 0) {
+    if (count == 0) {
       return TextSpan(
         style: baseStyle,
         children: [
@@ -925,7 +1026,7 @@ class _HeatCellState extends State<_HeatCell> {
             style: TextStyle(color: AppTheme.textSubtle),
           ),
           TextSpan(
-            text: widget.dateLabel,
+            text: dateLabel,
             style: const TextStyle(
               color: Color(0xFF475569),
               fontWeight: FontWeight.w600,
@@ -939,7 +1040,7 @@ class _HeatCellState extends State<_HeatCell> {
       style: baseStyle,
       children: [
         TextSpan(
-          text: '${widget.count} ${widget.count == 1 ? 'commit' : 'commits'}',
+          text: '$count ${count == 1 ? 'commit' : 'commits'}',
           style: const TextStyle(
             color: AppTheme.text,
             fontWeight: FontWeight.w700,
@@ -950,7 +1051,7 @@ class _HeatCellState extends State<_HeatCell> {
           style: TextStyle(color: AppTheme.textSubtle),
         ),
         TextSpan(
-          text: widget.dateLabel,
+          text: dateLabel,
           style: const TextStyle(
             color: Color(0xFF475569),
             fontWeight: FontWeight.w600,
@@ -1099,7 +1200,7 @@ class _SmartGenerateButton extends StatelessWidget {
       cursor: canSubmit ? SystemMouseCursors.click : SystemMouseCursors.basic,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        opacity: canSubmit ? 1 : 0.5,
+        opacity: 1,
         child: GestureDetector(
           key: keyValue,
           behavior: HitTestBehavior.opaque,
