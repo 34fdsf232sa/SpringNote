@@ -1063,7 +1063,7 @@ class _QuickCaptureCard extends StatelessWidget {
                         fontSize: 12,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 18),
                     FilledButton(
                       onPressed: canSubmit ? onSubmit : null,
                       style: ButtonStyle(
@@ -1081,35 +1081,43 @@ class _QuickCaptureCard extends StatelessWidget {
                         overlayColor: const WidgetStatePropertyAll(
                           Colors.transparent,
                         ),
-                        minimumSize: const WidgetStatePropertyAll(Size(0, 30)),
+                        minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         elevation: const WidgetStatePropertyAll(1),
                         shadowColor: const WidgetStatePropertyAll(
                           Color(0x1A000000),
                         ),
                         padding: const WidgetStatePropertyAll(
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         ),
-                        shape: WidgetStatePropertyAll(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
+                        shape: const WidgetStatePropertyAll(StadiumBorder()),
                         textStyle: const WidgetStatePropertyAll(
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            height: 1.2,
+                          ),
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(isSubmitting ? '整理中' : '智能生成'),
+                          Text(
+                            isSubmitting ? '整理中' : '智能生成',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              height: 1.2,
+                            ),
+                          ),
                           const SizedBox(width: 6),
                           if (isSubmitting)
                             const SizedBox(
-                              width: 13,
-                              height: 13,
+                              width: 12,
+                              height: 12,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                                strokeWidth: 1.4,
                                 color: Colors.white,
                               ),
                             )

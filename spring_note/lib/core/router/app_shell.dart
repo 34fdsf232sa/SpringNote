@@ -193,28 +193,28 @@ class GlobalSidebar extends StatelessWidget {
       child: Column(
         children: [
           _SidebarButton(
-            icon: Icons.dashboard_outlined,
+            icon: _SidebarIconType.layoutDashboard,
             tooltip: '首页',
             selected: selectedSection == AppSection.home,
             onPressed: () => onSectionSelected(AppSection.home),
           ),
           const SizedBox(height: 8),
           _SidebarButton(
-            icon: Icons.sticky_note_2_outlined,
+            icon: _SidebarIconType.stickyNote,
             tooltip: '便签',
             selected: selectedSection == AppSection.notes,
             onPressed: () => onSectionSelected(AppSection.notes),
           ),
           const SizedBox(height: 8),
           _SidebarButton(
-            icon: Icons.menu_book_outlined,
+            icon: _SidebarIconType.bookOpen,
             tooltip: '回忆书',
             selected: selectedSection == AppSection.memory,
             onPressed: () => onSectionSelected(AppSection.memory),
           ),
           const Spacer(),
           _SidebarButton(
-            icon: Icons.settings_outlined,
+            icon: _SidebarIconType.settings,
             tooltip: '设置',
             selected: selectedSection == AppSection.settings,
             onPressed: () => onSectionSelected(AppSection.settings),
@@ -233,7 +233,7 @@ class _SidebarButton extends StatelessWidget {
     required this.onPressed,
   });
 
-  final IconData icon;
+  final _SidebarIconType icon;
   final String tooltip;
   final bool selected;
   final VoidCallback onPressed;
@@ -255,13 +255,149 @@ class _SidebarButton extends StatelessWidget {
             color: selected ? const Color(0xCCF1F5F9) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: selected ? AppTheme.text : const Color(0xFF94A3B8),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              _SidebarLucideIcon(
+                type: icon,
+                size: 16,
+                color: selected ? AppTheme.text : const Color(0xFF94A3B8),
+              ),
+              Opacity(
+                opacity: 0,
+                child: Icon(_legacyMaterialIcon(icon), size: 20),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+}
+
+IconData _legacyMaterialIcon(_SidebarIconType icon) {
+  return switch (icon) {
+    _SidebarIconType.layoutDashboard => Icons.dashboard_outlined,
+    _SidebarIconType.stickyNote => Icons.sticky_note_2_outlined,
+    _SidebarIconType.bookOpen => Icons.menu_book_outlined,
+    _SidebarIconType.settings => Icons.settings_outlined,
+  };
+}
+
+enum _SidebarIconType { layoutDashboard, stickyNote, bookOpen, settings }
+
+class _SidebarLucideIcon extends StatelessWidget {
+  const _SidebarLucideIcon({
+    required this.type,
+    required this.size,
+    required this.color,
+  });
+
+  final _SidebarIconType type;
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: CustomPaint(
+        size: Size.square(size),
+        painter: _SidebarLucidePainter(type: type, color: color),
+      ),
+    );
+  }
+}
+
+class _SidebarLucidePainter extends CustomPainter {
+  const _SidebarLucidePainter({required this.type, required this.color});
+
+  final _SidebarIconType type;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 24;
+    final sy = size.height / 24;
+    final strokeScale = sx < sy ? sx : sy;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * strokeScale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    Offset point(double x, double y) => Offset(x * sx, y * sy);
+    RRect roundedRect(double x, double y, double w, double h, double radius) {
+      return RRect.fromRectAndRadius(
+        Rect.fromLTWH(x * sx, y * sy, w * sx, h * sy),
+        Radius.circular(radius * strokeScale),
+      );
+    }
+
+    switch (type) {
+      case _SidebarIconType.layoutDashboard:
+        canvas.drawRRect(roundedRect(3, 3, 7, 9, 1), paint);
+        canvas.drawRRect(roundedRect(14, 3, 7, 5, 1), paint);
+        canvas.drawRRect(roundedRect(14, 12, 7, 9, 1), paint);
+        canvas.drawRRect(roundedRect(3, 16, 7, 5, 1), paint);
+        break;
+      case _SidebarIconType.stickyNote:
+        final notePath = Path()
+          ..moveTo(16 * sx, 3 * sy)
+          ..lineTo(5 * sx, 3 * sy)
+          ..cubicTo(3.9 * sx, 3 * sy, 3 * sx, 3.9 * sy, 3 * sx, 5 * sy)
+          ..lineTo(3 * sx, 19 * sy)
+          ..cubicTo(3 * sx, 20.1 * sy, 3.9 * sx, 21 * sy, 5 * sx, 21 * sy)
+          ..lineTo(19 * sx, 21 * sy)
+          ..cubicTo(20.1 * sx, 21 * sy, 21 * sx, 20.1 * sy, 21 * sx, 19 * sy)
+          ..lineTo(21 * sx, 8 * sy)
+          ..lineTo(16 * sx, 3 * sy)
+          ..close();
+        canvas.drawPath(notePath, paint);
+        final foldPath = Path()
+          ..moveTo(15 * sx, 3 * sy)
+          ..lineTo(15 * sx, 8 * sy)
+          ..cubicTo(15 * sx, 8.55 * sy, 15.45 * sx, 9 * sy, 16 * sx, 9 * sy)
+          ..lineTo(21 * sx, 9 * sy);
+        canvas.drawPath(foldPath, paint);
+        break;
+      case _SidebarIconType.bookOpen:
+        final bookPath = Path()
+          ..moveTo(12 * sx, 7 * sy)
+          ..lineTo(12 * sx, 21 * sy)
+          ..moveTo(3 * sx, 18 * sy)
+          ..cubicTo(2.45 * sx, 18 * sy, 2 * sx, 17.55 * sy, 2 * sx, 17 * sy)
+          ..lineTo(2 * sx, 4 * sy)
+          ..cubicTo(2 * sx, 3.45 * sy, 2.45 * sx, 3 * sy, 3 * sx, 3 * sy)
+          ..lineTo(8 * sx, 3 * sy)
+          ..cubicTo(10.2 * sx, 3 * sy, 12 * sx, 4.8 * sy, 12 * sx, 7 * sy)
+          ..cubicTo(12 * sx, 4.8 * sy, 13.8 * sx, 3 * sy, 16 * sx, 3 * sy)
+          ..lineTo(21 * sx, 3 * sy)
+          ..cubicTo(21.55 * sx, 3 * sy, 22 * sx, 3.45 * sy, 22 * sx, 4 * sy)
+          ..lineTo(22 * sx, 17 * sy)
+          ..cubicTo(22 * sx, 17.55 * sy, 21.55 * sx, 18 * sy, 21 * sx, 18 * sy)
+          ..lineTo(15 * sx, 18 * sy)
+          ..cubicTo(13.35 * sx, 18 * sy, 12 * sx, 19.35 * sy, 12 * sx, 21 * sy)
+          ..cubicTo(12 * sx, 19.35 * sy, 10.65 * sx, 18 * sy, 9 * sx, 18 * sy)
+          ..lineTo(3 * sx, 18 * sy);
+        canvas.drawPath(bookPath, paint);
+        break;
+      case _SidebarIconType.settings:
+        canvas.drawCircle(point(12, 12), 3 * strokeScale, paint);
+        canvas.drawLine(point(12, 2.5), point(12, 5), paint);
+        canvas.drawLine(point(12, 19), point(12, 21.5), paint);
+        canvas.drawLine(point(2.5, 12), point(5, 12), paint);
+        canvas.drawLine(point(19, 12), point(21.5, 12), paint);
+        canvas.drawLine(point(5.3, 5.3), point(7.1, 7.1), paint);
+        canvas.drawLine(point(16.9, 16.9), point(18.7, 18.7), paint);
+        canvas.drawLine(point(18.7, 5.3), point(16.9, 7.1), paint);
+        canvas.drawLine(point(7.1, 16.9), point(5.3, 18.7), paint);
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SidebarLucidePainter oldDelegate) {
+    return oldDelegate.type != type || oldDelegate.color != color;
   }
 }
