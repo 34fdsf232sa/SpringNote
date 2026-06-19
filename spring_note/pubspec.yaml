@@ -38,6 +38,14 @@ dependencies:
   rust:
     path: rust_builder
   gpt_markdown: ^1.1.7
+  syntax_highlight: ^0.5.0
+
+dependency_overrides:
+  # syntax_highlight's CodeEditor depends on super_clipboard, which pulls in a
+  # native Rust plugin and Cargo downloads. The app only uses the pure Dart
+  # highlighter, so this local stub keeps Windows builds offline-friendly.
+  super_clipboard:
+    path: third_party/super_clipboard_stub
 
 dev_dependencies:
   flutter_test:
