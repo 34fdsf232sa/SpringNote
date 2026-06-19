@@ -290,43 +290,53 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SpringNotePageScaffold(
-      title: '首页',
-      actions: [
-        SpringNoteIconButton(
-          tooltip: '更多',
-          onPressed: () {},
-          icon: Icons.more_horiz,
+    return Material(
+      color: AppTheme.background,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1184),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(48, 30, 48, 40),
+            children: [
+              Row(
+                children: [
+                  Text('首页', style: Theme.of(context).textTheme.titleLarge),
+                  const Spacer(),
+                  SpringNoteIconButton(
+                    tooltip: '更多',
+                    onPressed: () {},
+                    icon: Icons.more_horiz,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 46),
+              _TodayHeroCard(
+                todayStats: _todayStats,
+                activityStats: _activityStats,
+                desktopWidgetState: _desktopWidgetController.state,
+                coinRatePerSecond: _desktopWidgetController.coinRatePerSecond,
+                levelProgressState: _levelProgressController.state,
+              ),
+              const SizedBox(height: 32),
+              _QuickCaptureCard(
+                controller: _controller,
+                focusNode: _focusNode,
+                isSubmitting: _isSubmitting,
+                onSubmit: _submit,
+              ),
+              const SizedBox(height: 32),
+              _OverviewGrid(overview: _overview),
+              if (_lastSavedPath != null) ...[
+                const SizedBox(height: 16),
+                _SavedPathBanner(path: _lastSavedPath!),
+              ],
+              if (_aiNotice != null) ...[
+                const SizedBox(height: 12),
+                _AiNoticeBanner(message: _aiNotice!),
+              ],
+            ],
+          ),
         ),
-      ],
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(48, 24, 48, 40),
-        children: [
-          _TodayHeroCard(
-            todayStats: _todayStats,
-            activityStats: _activityStats,
-            desktopWidgetState: _desktopWidgetController.state,
-            coinRatePerSecond: _desktopWidgetController.coinRatePerSecond,
-            levelProgressState: _levelProgressController.state,
-          ),
-          const SizedBox(height: 32),
-          _QuickCaptureCard(
-            controller: _controller,
-            focusNode: _focusNode,
-            isSubmitting: _isSubmitting,
-            onSubmit: _submit,
-          ),
-          const SizedBox(height: 32),
-          _OverviewGrid(overview: _overview),
-          if (_lastSavedPath != null) ...[
-            const SizedBox(height: 16),
-            _SavedPathBanner(path: _lastSavedPath!),
-          ],
-          if (_aiNotice != null) ...[
-            const SizedBox(height: 12),
-            _AiNoticeBanner(message: _aiNotice!),
-          ],
-        ],
       ),
     );
   }
