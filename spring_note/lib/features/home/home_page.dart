@@ -1226,13 +1226,13 @@ class _SmartGenerateButtonState extends State<_SmartGenerateButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeInOut,
-          height: 24,
+          height: 28,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: _hovered && widget.canSubmit
                 ? const Color(0xFF1E293B)
                 : const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x0D000000),
@@ -1251,7 +1251,7 @@ class _SmartGenerateButtonState extends State<_SmartGenerateButton> {
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  height: 1,
+                  height: 1.333,
                 ),
               ),
               const SizedBox(width: 6),
