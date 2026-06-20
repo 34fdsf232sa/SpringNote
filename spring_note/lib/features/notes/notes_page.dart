@@ -519,7 +519,10 @@ class _FimTextEditingController extends TextEditingController {
         TextSpan(text: text.substring(0, offset)),
         TextSpan(
           text: prediction,
-          style: effectiveStyle.copyWith(color: const Color(0xFF8A8A8A)),
+          style: effectiveStyle.copyWith(
+            color: const Color(0xFF8A8A8A),
+            fontStyle: FontStyle.italic,
+          ),
         ),
         TextSpan(text: text.substring(offset)),
       ],
@@ -1178,7 +1181,7 @@ class _EditorPaneState extends State<_EditorPane> {
     const editorStyle = TextStyle(
       color: Color(0xFF3A3A3A),
       fontFamily: 'Consolas',
-      fontSize: 15.6,
+      fontSize: 15,
       height: 1.75,
     );
     return _PaneFrame(
@@ -1261,12 +1264,6 @@ class _EditorPaneState extends State<_EditorPane> {
                   ),
                 ),
               ),
-              if (widget.predicting)
-                const Positioned(
-                  right: 24,
-                  bottom: 22,
-                  child: _FimPredictingChip(),
-                ),
             ],
           );
         },
@@ -1343,39 +1340,6 @@ class _EditorStatusPill extends StatelessWidget {
                 fontWeight: FontWeight.w500,
                 height: 1.2,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FimPredictingChip extends StatelessWidget {
-  const _FimPredictingChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5).withValues(alpha: 0.92),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.auto_awesome_rounded,
-              size: 14,
-              color: Color(0xFF8A8A8A),
-            ),
-            SizedBox(width: 7),
-            Text(
-              '补全预测中',
-              style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
             ),
           ],
         ),
