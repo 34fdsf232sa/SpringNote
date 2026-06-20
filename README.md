@@ -44,6 +44,6 @@ SpringNote 旨在打造极致流畅的轻量工作台：
 
 <div align="center">
 
-[![Star History Chart](https://api.star-history.com/chart?repos=Radiant303/SpringNote&type=date&legend=bottom-right)](https://www.star-history.com/?repos=Radiant303%2FSpringNote&type=date&legend=bottom-right)
+[![Star History Chart](https://api.star-history.com/chart?repos=Radiant303/SpringNote&type=date&legend=top-left)](https://www.star-history.com/?repos=Radiant303%2FSpringNote&type=date&legend=top-left)
 
 </div>
