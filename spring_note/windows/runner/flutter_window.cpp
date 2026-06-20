@@ -27,6 +27,10 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   desktop_widget_window_ = std::make_unique<DesktopWidgetWindow>(
       flutter_controller_->engine()->messenger(), GetHandle());
+  global_hotkey_manager_ = std::make_unique<GlobalHotkeyManager>(
+      flutter_controller_->engine()->messenger(), GetHandle());
+  tray_manager_ = std::make_unique<TrayManager>(
+      flutter_controller_->engine()->messenger(), GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -42,6 +46,8 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  tray_manager_ = nullptr;
+  global_hotkey_manager_ = nullptr;
   desktop_widget_window_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
@@ -54,6 +60,22 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (tray_manager_ &&
+      tray_manager_->HandleMessage(hwnd, message, wparam, lparam)) {
+    return 0;
+  }
+
+  if (message == WM_CLOSE && tray_manager_ &&
+      tray_manager_->ShouldCloseToTray()) {
+    ShowWindow(hwnd, SW_HIDE);
+    return 0;
+  }
+
+  if (global_hotkey_manager_ &&
+      global_hotkey_manager_->HandleMessage(hwnd, message, wparam, lparam)) {
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

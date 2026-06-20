@@ -10,6 +10,8 @@ class AppConfig {
     required this.autoStart,
     required this.showUpdates,
     required this.showDesktopWidget,
+    required this.showTrayIcon,
+    required this.closeToTray,
     required this.memorySearchLimit,
     required this.apiLogEnabled,
     required this.providers,
@@ -25,6 +27,8 @@ class AppConfig {
   final bool autoStart;
   final bool showUpdates;
   final bool showDesktopWidget;
+  final bool showTrayIcon;
+  final bool closeToTray;
   final double memorySearchLimit;
   final bool apiLogEnabled;
   final List<ProviderConfig> providers;
@@ -41,6 +45,8 @@ class AppConfig {
       autoStart: false,
       showUpdates: true,
       showDesktopWidget: true,
+      showTrayIcon: true,
+      closeToTray: true,
       memorySearchLimit: 3,
       apiLogEnabled: false,
       providers: [],
@@ -63,6 +69,10 @@ class AppConfig {
       autoStart: json['autoStart'] as bool? ?? false,
       showUpdates: json['showUpdates'] as bool? ?? true,
       showDesktopWidget: json['showDesktopWidget'] as bool? ?? true,
+      showTrayIcon: json['showTrayIcon'] as bool? ?? true,
+      closeToTray:
+          (json['showTrayIcon'] as bool? ?? true) &&
+          (json['closeToTray'] as bool? ?? true),
       memorySearchLimit: _readDouble(json['memorySearchLimit'], 3),
       apiLogEnabled: json['apiLogEnabled'] as bool? ?? false,
       providers: _readProviders(json['providers']),
@@ -84,6 +94,8 @@ class AppConfig {
       'autoStart': autoStart,
       'showUpdates': showUpdates,
       'showDesktopWidget': showDesktopWidget,
+      'showTrayIcon': showTrayIcon,
+      'closeToTray': closeToTray,
       'memorySearchLimit': memorySearchLimit,
       'apiLogEnabled': apiLogEnabled,
       'providers': providers.map((provider) => provider.toJson()).toList(),
@@ -101,12 +113,17 @@ class AppConfig {
     bool? autoStart,
     bool? showUpdates,
     bool? showDesktopWidget,
+    bool? showTrayIcon,
+    bool? closeToTray,
     double? memorySearchLimit,
     bool? apiLogEnabled,
     List<ProviderConfig>? providers,
     Map<String, String?>? defaultModels,
     Map<String, String?>? hotkeys,
   }) {
+    final nextShowTrayIcon = showTrayIcon ?? this.showTrayIcon;
+    final nextCloseToTray =
+        nextShowTrayIcon && (closeToTray ?? this.closeToTray);
     return AppConfig(
       dailyWorkHours: dailyWorkHours ?? this.dailyWorkHours,
       dailySalary: dailySalary ?? this.dailySalary,
@@ -116,6 +133,8 @@ class AppConfig {
       autoStart: autoStart ?? this.autoStart,
       showUpdates: showUpdates ?? this.showUpdates,
       showDesktopWidget: showDesktopWidget ?? this.showDesktopWidget,
+      showTrayIcon: nextShowTrayIcon,
+      closeToTray: nextCloseToTray,
       memorySearchLimit: memorySearchLimit ?? this.memorySearchLimit,
       apiLogEnabled: apiLogEnabled ?? this.apiLogEnabled,
       providers: providers ?? this.providers,

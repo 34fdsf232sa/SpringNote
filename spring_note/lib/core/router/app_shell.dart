@@ -13,8 +13,10 @@ import '../models/note_external_update.dart';
 import '../models/note_file.dart';
 import '../services/desktop_widget_controller.dart';
 import '../services/desktop_widget_window_bridge.dart';
+import '../services/global_hotkey_service.dart';
 import '../services/level_progress_controller.dart';
 import '../services/startup_report_generation_service.dart';
+import '../services/tray_service.dart';
 import '../theme/app_theme.dart';
 
 enum AppSection { home, notes, memory, settings }
@@ -43,6 +45,8 @@ class _AppShellState extends State<AppShell> {
       DesktopWidgetController()..attach(_localDataState);
   late final DesktopWidgetWindowBridge _desktopWidgetWindow =
       DesktopWidgetWindowBridge();
+  final GlobalHotkeyService _globalHotkeyService = const GlobalHotkeyService();
+  final TrayService _trayService = const TrayService();
   late final LevelProgressController _levelProgressController =
       LevelProgressController()..attach(_localDataState);
   late final ValueNotifier<NoteExternalUpdate?> _noteExternalUpdate =
@@ -62,6 +66,8 @@ class _AppShellState extends State<AppShell> {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncDesktopWidgetWindow();
+      _syncTray(_localDataState.config);
+      _syncGlobalHotkey(_localDataState.config);
       unawaited(_runStartupReportGeneration(_localDataState));
     });
   }
@@ -74,6 +80,8 @@ class _AppShellState extends State<AppShell> {
       _desktopWidgetController.attach(_localDataState);
       _levelProgressController.attach(_localDataState);
       _syncDesktopWidgetWindow();
+      _syncTray(_localDataState.config);
+      _syncGlobalHotkey(_localDataState.config);
       unawaited(_runStartupReportGeneration(_localDataState));
     }
   }
@@ -82,6 +90,8 @@ class _AppShellState extends State<AppShell> {
   void dispose() {
     _desktopWidgetController.removeListener(_syncDesktopWidgetWindow);
     _levelProgressController.removeListener(_handleLevelProgressChanged);
+    unawaited(_globalHotkeyService.unregisterToggleWindowHotkey());
+    unawaited(_trayService.dispose());
     unawaited(_desktopWidgetWindow.dispose());
     _noteExternalUpdate.dispose();
     _desktopWidgetController.dispose();
@@ -116,6 +126,18 @@ class _AppShellState extends State<AppShell> {
       path: path,
       revision: ++_noteExternalUpdateRevision,
     );
+  }
+
+  void _syncGlobalHotkey(AppConfig config) {
+    unawaited(
+      _globalHotkeyService.setToggleWindowHotkey(
+        config.hotkeys['toggleWindow'],
+      ),
+    );
+  }
+
+  void _syncTray(AppConfig config) {
+    unawaited(_trayService.sync(config));
   }
 
   Future<void> _runStartupReportGeneration(
@@ -205,6 +227,8 @@ class _AppShellState extends State<AppShell> {
                         });
                         widget.onConfigChanged?.call(config);
                         _syncDesktopWidgetWindow();
+                        _syncTray(config);
+                        _syncGlobalHotkey(config);
                       },
                     ),
                   ],

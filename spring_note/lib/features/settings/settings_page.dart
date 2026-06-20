@@ -736,6 +736,29 @@ class _PreferencesPanel extends StatelessWidget {
           ],
         ),
         _SettingsCard(
+          title: '托盘',
+          children: [
+            _SwitchSettingRow(
+              label: '显示托盘图标',
+              value: config.showTrayIcon,
+              onChanged: (value) => onChanged(
+                config.copyWith(
+                  showTrayIcon: value,
+                  closeToTray: value ? config.closeToTray : false,
+                ),
+              ),
+            ),
+            _SwitchSettingRow(
+              label: '关闭时最小化到托盘',
+              value: config.showTrayIcon && config.closeToTray,
+              enabled: config.showTrayIcon,
+              onChanged: config.showTrayIcon
+                  ? (value) => onChanged(config.copyWith(closeToTray: value))
+                  : null,
+            ),
+          ],
+        ),
+        _SettingsCard(
           title: '组件设置',
           children: [
             _SwitchSettingRow(
@@ -3088,6 +3111,7 @@ class _HotkeysPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final toggleWindow = config.hotkeys['toggleWindow'] ?? '';
+    final toggleWindowEnabled = toggleWindow.trim().isNotEmpty;
     return _SettingsScrollFrame(
       maxWidth: 1120,
       children: [
@@ -3124,7 +3148,18 @@ class _HotkeysPanel extends StatelessWidget {
                     },
                     icon: const Icon(Icons.close_rounded, size: 17),
                   ),
-                  Switch(value: true, onChanged: (_) {}),
+                  Switch(
+                    value: toggleWindowEnabled,
+                    onChanged: (enabled) {
+                      final hotkeys = Map<String, String?>.from(config.hotkeys);
+                      hotkeys['toggleWindow'] = enabled
+                          ? (toggleWindow.trim().isEmpty
+                                ? 'Ctrl+Shift+S'
+                                : toggleWindow.trim())
+                          : '';
+                      onChanged(config.copyWith(hotkeys: hotkeys));
+                    },
+                  ),
                 ],
               ),
             ),
@@ -5089,26 +5124,34 @@ class _SwitchSettingRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onChanged,
+    this.enabled = true,
   });
 
   final String label;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return _SettingRowShell(
       label: label,
-      child: Switch(value: value, onChanged: onChanged),
+      enabled: enabled,
+      child: Switch(value: value, onChanged: enabled ? onChanged : null),
     );
   }
 }
 
 class _SettingRowShell extends StatelessWidget {
-  const _SettingRowShell({required this.label, required this.child});
+  const _SettingRowShell({
+    required this.label,
+    required this.child,
+    this.enabled = true,
+  });
 
   final String label;
   final Widget child;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -5122,9 +5165,9 @@ class _SettingRowShell extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppTheme.text),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: enabled ? AppTheme.text : AppTheme.textSubtle,
+            ),
           ),
           const Spacer(),
           child,

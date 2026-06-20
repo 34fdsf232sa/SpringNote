@@ -7,6 +7,8 @@
 #include <memory>
 
 #include "desktop_widget_window.h"
+#include "global_hotkey_manager.h"
+#include "tray_manager.h"
 #include "win32_window.h"
 
 // A window that does nothing but host a Flutter view.
@@ -32,6 +34,12 @@ class FlutterWindow : public Win32Window {
 
   // Native always-on-top desktop widget controlled by Flutter state.
   std::unique_ptr<DesktopWidgetWindow> desktop_widget_window_;
+
+  // Native global hotkeys controlled by Flutter settings.
+  std::unique_ptr<GlobalHotkeyManager> global_hotkey_manager_;
+
+  // Native Windows tray icon and close-to-tray behavior.
+  std::unique_ptr<TrayManager> tray_manager_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_
