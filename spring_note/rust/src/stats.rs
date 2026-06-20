@@ -1,5 +1,5 @@
 use crate::ai::{AiChatRequest, AiTextResult};
-use chrono::Local;
+use chrono::{Datelike, Duration, Local, NaiveDate, Weekday};
 use rusqlite::{Connection, OptionalExtension, Result, params};
 use std::fs;
 use std::path::Path;
@@ -121,8 +121,10 @@ pub fn record_app_startup(app_data_dir: &str) -> Result<()> {
     let connection = open_connection(app_data_dir)?;
     initialize(&connection)?;
     connection.execute(
-        "INSERT INTO app_counters (key, value) VALUES ('app_launches', 1)
-        ON CONFLICT(key) DO UPDATE SET value = value + 1",
+        "INSERT INTO daily_stats (date, app_launches)
+        VALUES (date('now', 'localtime'), 1)
+        ON CONFLICT(date) DO UPDATE SET
+            app_launches = app_launches + excluded.app_launches",
         [],
     )?;
     Ok(())
@@ -148,9 +150,9 @@ pub fn get_stats_snapshot(
     initialize(&connection)?;
 
     let (daily_notes, weekly_notes, monthly_notes) = (
-        count_markdown_files(daily_notes_dir),
-        count_markdown_files(weekly_notes_dir),
-        count_markdown_files(monthly_notes_dir),
+        count_daily_markdown_files(daily_notes_dir, start_date, end_date),
+        count_weekly_markdown_files(weekly_notes_dir, start_date, end_date),
+        count_monthly_markdown_files(monthly_notes_dir, start_date, end_date),
     );
 
     let summaries: i32 = connection.query_row(
@@ -186,14 +188,16 @@ pub fn get_stats_snapshot(
         params![start_date, end_date],
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
-    let app_launches: i32 = connection
-        .query_row(
-            "SELECT value FROM app_counters WHERE key = 'app_launches'",
-            [],
-            |row| row.get(0),
-        )
-        .optional()?
-        .unwrap_or(0);
+    let app_launches_from_daily: i32 = connection.query_row(
+        "SELECT COALESCE(SUM(app_launches), 0) FROM daily_stats WHERE date BETWEEN ?1 AND ?2",
+        params![start_date, end_date],
+        |row| row.get(0),
+    )?;
+    let app_launches = if is_all_time_range(start_date) {
+        app_launches_from_daily + read_legacy_app_launches(&connection)?
+    } else {
+        app_launches_from_daily
+    };
 
     let mut activity_statement = connection.prepare(
         "SELECT date, active_count FROM daily_stats WHERE date BETWEEN ?1 AND ?2 ORDER BY date",
@@ -346,7 +350,8 @@ fn initialize(connection: &Connection) -> Result<()> {
             fim_completions INTEGER NOT NULL DEFAULT 0,
             work_seconds INTEGER NOT NULL DEFAULT 0,
             coins REAL NOT NULL DEFAULT 0,
-            active_count INTEGER NOT NULL DEFAULT 0
+            active_count INTEGER NOT NULL DEFAULT 0,
+            app_launches INTEGER NOT NULL DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS app_counters (
@@ -355,23 +360,166 @@ fn initialize(connection: &Connection) -> Result<()> {
         );
         ",
     )?;
+    ensure_column(
+        connection,
+        "daily_stats",
+        "app_launches",
+        "INTEGER NOT NULL DEFAULT 0",
+    )?;
     Ok(())
 }
 
-fn count_markdown_files(directory: &str) -> i32 {
+fn ensure_column(
+    connection: &Connection,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> Result<()> {
+    let mut statement = connection.prepare(&format!("PRAGMA table_info({table})"))?;
+    let columns = statement
+        .query_map([], |row| row.get::<_, String>(1))?
+        .collect::<Result<Vec<_>>>()?;
+    if columns.iter().any(|name| name == column) {
+        return Ok(());
+    }
+    connection.execute(
+        &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+        [],
+    )?;
+    Ok(())
+}
+
+fn read_legacy_app_launches(connection: &Connection) -> Result<i32> {
+    Ok(connection
+        .query_row(
+            "SELECT value FROM app_counters WHERE key = 'app_launches'",
+            [],
+            |row| row.get(0),
+        )
+        .optional()?
+        .unwrap_or(0))
+}
+
+fn is_all_time_range(start_date: &str) -> bool {
+    parse_stats_date(start_date).is_some_and(|date| date <= date_ymd(2000, 1, 1))
+}
+
+fn count_daily_markdown_files(directory: &str, start_date: &str, end_date: &str) -> i32 {
+    let Some((start, end)) = parse_stats_range(start_date, end_date) else {
+        return 0;
+    };
+    count_markdown_stems(directory, |stem| {
+        parse_daily_stem(stem).is_some_and(|date| date >= start && date <= end)
+    })
+}
+
+fn count_weekly_markdown_files(directory: &str, start_date: &str, end_date: &str) -> i32 {
+    let Some((start, end)) = parse_stats_range(start_date, end_date) else {
+        return 0;
+    };
+    count_markdown_stems(directory, |stem| {
+        parse_weekly_stem(stem).is_some_and(|week_start| {
+            ranges_overlap(week_start, week_start + Duration::days(6), start, end)
+        })
+    })
+}
+
+fn count_monthly_markdown_files(directory: &str, start_date: &str, end_date: &str) -> i32 {
+    let Some((start, end)) = parse_stats_range(start_date, end_date) else {
+        return 0;
+    };
+    count_markdown_stems(directory, |stem| {
+        parse_monthly_stem(stem).is_some_and(|month_start| {
+            let month_end = next_month(month_start) - Duration::days(1);
+            ranges_overlap(month_start, month_end, start, end)
+        })
+    })
+}
+
+fn count_markdown_stems<F>(directory: &str, mut predicate: F) -> i32
+where
+    F: FnMut(&str) -> bool,
+{
     let Ok(entries) = fs::read_dir(directory) else {
         return 0;
     };
     entries
         .filter_map(Result::ok)
-        .filter(|entry| {
-            entry
-                .path()
-                .extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+        .filter_map(|entry| {
+            let path = entry.path();
+            let extension = path.extension()?.to_str()?;
+            if !extension.eq_ignore_ascii_case("md") {
+                return None;
+            }
+            path.file_stem()?.to_str().map(str::to_owned)
         })
+        .filter(|stem| predicate(stem))
         .count() as i32
+}
+
+fn parse_stats_range(start_date: &str, end_date: &str) -> Option<(NaiveDate, NaiveDate)> {
+    let start = parse_stats_date(start_date)?;
+    let end = parse_stats_date(end_date)?;
+    Some(if start <= end {
+        (start, end)
+    } else {
+        (end, start)
+    })
+}
+
+fn parse_stats_date(value: &str) -> Option<NaiveDate> {
+    NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()
+}
+
+fn parse_daily_stem(stem: &str) -> Option<NaiveDate> {
+    parse_stats_date(stem)
+}
+
+fn parse_weekly_stem(stem: &str) -> Option<NaiveDate> {
+    let parts: Vec<&str> = stem.split("-W").collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    let year = parts[0].parse::<i32>().ok()?;
+    let week = parts[1].parse::<u32>().ok()?;
+    NaiveDate::from_isoywd_opt(year, week, Weekday::Mon)
+}
+
+fn parse_monthly_stem(stem: &str) -> Option<NaiveDate> {
+    let parts: Vec<&str> = stem.split('-').collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    let year = parts[0].parse::<i32>().ok()?;
+    let month = parts[1].parse::<u32>().ok()?;
+    NaiveDate::from_ymd_opt(year, month, 1)
+}
+
+fn ranges_overlap(
+    left_start: NaiveDate,
+    left_end: NaiveDate,
+    right_start: NaiveDate,
+    right_end: NaiveDate,
+) -> bool {
+    left_start <= right_end && left_end >= right_start
+}
+
+fn next_month(date: NaiveDate) -> NaiveDate {
+    if date.month() == 12 {
+        date_ymd(date.year() + 1, 1, 1)
+    } else {
+        date_ymd(date.year(), date.month() + 1, 1)
+    }
+}
+
+fn date_ymd(year: i32, month: u32, day: u32) -> NaiveDate {
+    NaiveDate::from_ymd_opt(year, month, day).expect("static date must be valid")
+}
+
+#[cfg(test)]
+fn format_iso_week(date: NaiveDate) -> String {
+    let iso = date.iso_week();
+    format!("{}-W{:02}", iso.year(), iso.week())
 }
 
 #[cfg(test)]
@@ -409,8 +557,14 @@ mod tests {
         fs::create_dir_all(&daily).unwrap();
         fs::create_dir_all(&weekly).unwrap();
         fs::create_dir_all(&monthly).unwrap();
-        fs::write(daily.join("2026-06-18.md"), "# 日报").unwrap();
-        fs::write(weekly.join("2026-W25.md"), "# 周报").unwrap();
+        let today_date = Local::now().date_naive();
+        let today = today_date.format("%Y-%m-%d").to_string();
+        fs::write(daily.join(format!("{today}.md")), "# 日报").unwrap();
+        fs::write(
+            weekly.join(format!("{}.md", format_iso_week(today_date))),
+            "# 周报",
+        )
+        .unwrap();
 
         record_app_startup(&app_data_dir).unwrap();
         record_home_generation(&app_data_dir).unwrap();
@@ -418,7 +572,6 @@ mod tests {
         let fim_result = AiTextResult::success(&fim_request, "ok", 10, 6, 2);
         record_model_call(&app_data_dir, &fim_request, &fim_result).unwrap();
 
-        let today = Local::now().format("%Y-%m-%d").to_string();
         let snapshot = get_stats_snapshot(
             &app_data_dir,
             &daily.to_string_lossy(),
@@ -469,6 +622,40 @@ mod tests {
         .unwrap();
 
         assert_eq!(snapshot.summary.summaries, 10);
+        fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn counts_note_files_inside_requested_range() {
+        let dir = temp_dir("spring_note_stats_note_range");
+        let app_data_dir = dir.to_string_lossy().to_string();
+        let daily = dir.join("notes").join("daily");
+        let weekly = dir.join("notes").join("weekly");
+        let monthly = dir.join("notes").join("monthly");
+        fs::create_dir_all(&daily).unwrap();
+        fs::create_dir_all(&weekly).unwrap();
+        fs::create_dir_all(&monthly).unwrap();
+        fs::write(daily.join("2026-06-18.md"), "# 日报").unwrap();
+        fs::write(daily.join("2026-05-01.md"), "# 日报").unwrap();
+        fs::write(weekly.join("2026-W25.md"), "# 周报").unwrap();
+        fs::write(weekly.join("2026-W20.md"), "# 周报").unwrap();
+        fs::write(monthly.join("2026-06.md"), "# 月报").unwrap();
+        fs::write(monthly.join("2026-04.md"), "# 月报").unwrap();
+
+        let snapshot = get_stats_snapshot(
+            &app_data_dir,
+            &daily.to_string_lossy(),
+            &weekly.to_string_lossy(),
+            &monthly.to_string_lossy(),
+            "2026-06-18",
+            "2026-06-18",
+        )
+        .unwrap();
+
+        assert_eq!(snapshot.summary.daily_notes, 1);
+        assert_eq!(snapshot.summary.weekly_notes, 1);
+        assert_eq!(snapshot.summary.monthly_notes, 1);
+        assert_eq!(snapshot.summary.total_records, 3);
         fs::remove_dir_all(dir).ok();
     }
 

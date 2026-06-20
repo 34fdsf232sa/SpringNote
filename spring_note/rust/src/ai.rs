@@ -897,6 +897,7 @@ mod tests {
             issues: vec![],
             plans: vec!["B".to_string()],
             date: "2026-06-18".to_string(),
+            industry: String::new(),
             api_log_enabled: false,
         });
 

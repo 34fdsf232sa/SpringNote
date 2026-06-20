@@ -12,6 +12,7 @@ import '../../core/services/stats_service.dart';
 import '../../core/services/system_font_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../src/rust/stats.dart' as rust_stats;
+import 'settings_stats_panel.dart';
 
 enum _SettingsSection {
   preferences('偏好设置', _SettingsNavIconType.monitor),
@@ -245,7 +246,7 @@ class _SettingsPageState extends State<SettingsPage> {
         config: _config,
         onChanged: _updateConfig,
       ),
-      _SettingsSection.stats => _StatsPanel(
+      _SettingsSection.stats => SettingsStatsPanel(
         localDataState: widget.localDataState.copyWith(config: _config),
       ),
       _SettingsSection.about => const _AboutPanel(),
