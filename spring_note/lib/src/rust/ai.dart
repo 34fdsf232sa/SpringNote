@@ -183,6 +183,7 @@ class DailyMergeRequest {
   final List<String> issues;
   final List<String> plans;
   final String date;
+  final String industry;
   final bool apiLogEnabled;
 
   const DailyMergeRequest({
@@ -195,6 +196,7 @@ class DailyMergeRequest {
     required this.issues,
     required this.plans,
     required this.date,
+    required this.industry,
     required this.apiLogEnabled,
   });
 
@@ -209,6 +211,7 @@ class DailyMergeRequest {
       issues.hashCode ^
       plans.hashCode ^
       date.hashCode ^
+      industry.hashCode ^
       apiLogEnabled.hashCode;
 
   @override
@@ -225,6 +228,7 @@ class DailyMergeRequest {
           issues == other.issues &&
           plans == other.plans &&
           date == other.date &&
+          industry == other.industry &&
           apiLogEnabled == other.apiLogEnabled;
 }
 
@@ -528,6 +532,7 @@ class ReportRequest {
   final AiModel model;
   final String sourceMarkdown;
   final String periodLabel;
+  final String industry;
   final bool apiLogEnabled;
 
   const ReportRequest({
@@ -536,6 +541,7 @@ class ReportRequest {
     required this.model,
     required this.sourceMarkdown,
     required this.periodLabel,
+    required this.industry,
     required this.apiLogEnabled,
   });
 
@@ -546,6 +552,7 @@ class ReportRequest {
       model.hashCode ^
       sourceMarkdown.hashCode ^
       periodLabel.hashCode ^
+      industry.hashCode ^
       apiLogEnabled.hashCode;
 
   @override
@@ -558,6 +565,7 @@ class ReportRequest {
           model == other.model &&
           sourceMarkdown == other.sourceMarkdown &&
           periodLabel == other.periodLabel &&
+          industry == other.industry &&
           apiLogEnabled == other.apiLogEnabled;
 }
 
@@ -566,6 +574,7 @@ class StructuredNoteRequest {
   final AiProvider provider;
   final AiModel model;
   final String input;
+  final String industry;
   final bool apiLogEnabled;
 
   const StructuredNoteRequest({
@@ -573,6 +582,7 @@ class StructuredNoteRequest {
     required this.provider,
     required this.model,
     required this.input,
+    required this.industry,
     required this.apiLogEnabled,
   });
 
@@ -582,6 +592,7 @@ class StructuredNoteRequest {
       provider.hashCode ^
       model.hashCode ^
       input.hashCode ^
+      industry.hashCode ^
       apiLogEnabled.hashCode;
 
   @override
@@ -593,6 +604,7 @@ class StructuredNoteRequest {
           provider == other.provider &&
           model == other.model &&
           input == other.input &&
+          industry == other.industry &&
           apiLogEnabled == other.apiLogEnabled;
 }
 

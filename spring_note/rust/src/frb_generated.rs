@@ -789,6 +789,7 @@ impl SseDecode for crate::ai::DailyMergeRequest {
         let mut var_issues = <Vec<String>>::sse_decode(deserializer);
         let mut var_plans = <Vec<String>>::sse_decode(deserializer);
         let mut var_date = <String>::sse_decode(deserializer);
+        let mut var_industry = <String>::sse_decode(deserializer);
         let mut var_apiLogEnabled = <bool>::sse_decode(deserializer);
         return crate::ai::DailyMergeRequest {
             app_data_dir: var_appDataDir,
@@ -800,6 +801,7 @@ impl SseDecode for crate::ai::DailyMergeRequest {
             issues: var_issues,
             plans: var_plans,
             date: var_date,
+            industry: var_industry,
             api_log_enabled: var_apiLogEnabled,
         };
     }
@@ -1109,6 +1111,7 @@ impl SseDecode for crate::ai::ReportRequest {
         let mut var_model = <crate::ai::AiModel>::sse_decode(deserializer);
         let mut var_sourceMarkdown = <String>::sse_decode(deserializer);
         let mut var_periodLabel = <String>::sse_decode(deserializer);
+        let mut var_industry = <String>::sse_decode(deserializer);
         let mut var_apiLogEnabled = <bool>::sse_decode(deserializer);
         return crate::ai::ReportRequest {
             app_data_dir: var_appDataDir,
@@ -1116,6 +1119,7 @@ impl SseDecode for crate::ai::ReportRequest {
             model: var_model,
             source_markdown: var_sourceMarkdown,
             period_label: var_periodLabel,
+            industry: var_industry,
             api_log_enabled: var_apiLogEnabled,
         };
     }
@@ -1177,12 +1181,14 @@ impl SseDecode for crate::ai::StructuredNoteRequest {
         let mut var_provider = <crate::ai::AiProvider>::sse_decode(deserializer);
         let mut var_model = <crate::ai::AiModel>::sse_decode(deserializer);
         let mut var_input = <String>::sse_decode(deserializer);
+        let mut var_industry = <String>::sse_decode(deserializer);
         let mut var_apiLogEnabled = <bool>::sse_decode(deserializer);
         return crate::ai::StructuredNoteRequest {
             app_data_dir: var_appDataDir,
             provider: var_provider,
             model: var_model,
             input: var_input,
+            industry: var_industry,
             api_log_enabled: var_apiLogEnabled,
         };
     }
@@ -1429,6 +1435,7 @@ impl flutter_rust_bridge::IntoDart for crate::ai::DailyMergeRequest {
             self.issues.into_into_dart().into_dart(),
             self.plans.into_into_dart().into_dart(),
             self.date.into_into_dart().into_dart(),
+            self.industry.into_into_dart().into_dart(),
             self.api_log_enabled.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -1662,6 +1669,7 @@ impl flutter_rust_bridge::IntoDart for crate::ai::ReportRequest {
             self.model.into_into_dart().into_dart(),
             self.source_markdown.into_into_dart().into_dart(),
             self.period_label.into_into_dart().into_dart(),
+            self.industry.into_into_dart().into_dart(),
             self.api_log_enabled.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -1727,6 +1735,7 @@ impl flutter_rust_bridge::IntoDart for crate::ai::StructuredNoteRequest {
             self.provider.into_into_dart().into_dart(),
             self.model.into_into_dart().into_dart(),
             self.input.into_into_dart().into_dart(),
+            self.industry.into_into_dart().into_dart(),
             self.api_log_enabled.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -1881,6 +1890,7 @@ impl SseEncode for crate::ai::DailyMergeRequest {
         <Vec<String>>::sse_encode(self.issues, serializer);
         <Vec<String>>::sse_encode(self.plans, serializer);
         <String>::sse_encode(self.date, serializer);
+        <String>::sse_encode(self.industry, serializer);
         <bool>::sse_encode(self.api_log_enabled, serializer);
     }
 }
@@ -2098,6 +2108,7 @@ impl SseEncode for crate::ai::ReportRequest {
         <crate::ai::AiModel>::sse_encode(self.model, serializer);
         <String>::sse_encode(self.source_markdown, serializer);
         <String>::sse_encode(self.period_label, serializer);
+        <String>::sse_encode(self.industry, serializer);
         <bool>::sse_encode(self.api_log_enabled, serializer);
     }
 }
@@ -2137,6 +2148,7 @@ impl SseEncode for crate::ai::StructuredNoteRequest {
         <crate::ai::AiProvider>::sse_encode(self.provider, serializer);
         <crate::ai::AiModel>::sse_encode(self.model, serializer);
         <String>::sse_encode(self.input, serializer);
+        <String>::sse_encode(self.industry, serializer);
         <bool>::sse_encode(self.api_log_enabled, serializer);
     }
 }

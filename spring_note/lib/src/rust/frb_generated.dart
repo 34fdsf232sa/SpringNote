@@ -850,8 +850,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   DailyMergeRequest dco_decode_daily_merge_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return DailyMergeRequest(
       appDataDir: dco_decode_String(arr[0]),
       provider: dco_decode_ai_provider(arr[1]),
@@ -862,7 +862,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       issues: dco_decode_list_String(arr[6]),
       plans: dco_decode_list_String(arr[7]),
       date: dco_decode_String(arr[8]),
-      apiLogEnabled: dco_decode_bool(arr[9]),
+      industry: dco_decode_String(arr[9]),
+      apiLogEnabled: dco_decode_bool(arr[10]),
     );
   }
 
@@ -1079,15 +1080,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ReportRequest dco_decode_report_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return ReportRequest(
       appDataDir: dco_decode_String(arr[0]),
       provider: dco_decode_ai_provider(arr[1]),
       model: dco_decode_ai_model(arr[2]),
       sourceMarkdown: dco_decode_String(arr[3]),
       periodLabel: dco_decode_String(arr[4]),
-      apiLogEnabled: dco_decode_bool(arr[5]),
+      industry: dco_decode_String(arr[5]),
+      apiLogEnabled: dco_decode_bool(arr[6]),
     );
   }
 
@@ -1131,14 +1133,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   StructuredNoteRequest dco_decode_structured_note_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return StructuredNoteRequest(
       appDataDir: dco_decode_String(arr[0]),
       provider: dco_decode_ai_provider(arr[1]),
       model: dco_decode_ai_model(arr[2]),
       input: dco_decode_String(arr[3]),
-      apiLogEnabled: dco_decode_bool(arr[4]),
+      industry: dco_decode_String(arr[4]),
+      apiLogEnabled: dco_decode_bool(arr[5]),
     );
   }
 
@@ -1363,6 +1366,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_issues = sse_decode_list_String(deserializer);
     var var_plans = sse_decode_list_String(deserializer);
     var var_date = sse_decode_String(deserializer);
+    var var_industry = sse_decode_String(deserializer);
     var var_apiLogEnabled = sse_decode_bool(deserializer);
     return DailyMergeRequest(
       appDataDir: var_appDataDir,
@@ -1374,6 +1378,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       issues: var_issues,
       plans: var_plans,
       date: var_date,
+      industry: var_industry,
       apiLogEnabled: var_apiLogEnabled,
     );
   }
@@ -1688,6 +1693,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_model = sse_decode_ai_model(deserializer);
     var var_sourceMarkdown = sse_decode_String(deserializer);
     var var_periodLabel = sse_decode_String(deserializer);
+    var var_industry = sse_decode_String(deserializer);
     var var_apiLogEnabled = sse_decode_bool(deserializer);
     return ReportRequest(
       appDataDir: var_appDataDir,
@@ -1695,6 +1701,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       model: var_model,
       sourceMarkdown: var_sourceMarkdown,
       periodLabel: var_periodLabel,
+      industry: var_industry,
       apiLogEnabled: var_apiLogEnabled,
     );
   }
@@ -1754,12 +1761,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_provider = sse_decode_ai_provider(deserializer);
     var var_model = sse_decode_ai_model(deserializer);
     var var_input = sse_decode_String(deserializer);
+    var var_industry = sse_decode_String(deserializer);
     var var_apiLogEnabled = sse_decode_bool(deserializer);
     return StructuredNoteRequest(
       appDataDir: var_appDataDir,
       provider: var_provider,
       model: var_model,
       input: var_input,
+      industry: var_industry,
       apiLogEnabled: var_apiLogEnabled,
     );
   }
@@ -1986,6 +1995,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_String(self.issues, serializer);
     sse_encode_list_String(self.plans, serializer);
     sse_encode_String(self.date, serializer);
+    sse_encode_String(self.industry, serializer);
     sse_encode_bool(self.apiLogEnabled, serializer);
   }
 
@@ -2226,6 +2236,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_ai_model(self.model, serializer);
     sse_encode_String(self.sourceMarkdown, serializer);
     sse_encode_String(self.periodLabel, serializer);
+    sse_encode_String(self.industry, serializer);
     sse_encode_bool(self.apiLogEnabled, serializer);
   }
 
@@ -2265,6 +2276,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_ai_provider(self.provider, serializer);
     sse_encode_ai_model(self.model, serializer);
     sse_encode_String(self.input, serializer);
+    sse_encode_String(self.industry, serializer);
     sse_encode_bool(self.apiLogEnabled, serializer);
   }
 

@@ -29,6 +29,7 @@ class AiClientService {
         provider: _toRustProvider(selection.provider),
         model: _toRustModel(selection.model),
         input: input,
+        industry: config.industry,
         apiLogEnabled: config.apiLogEnabled,
       ),
     );
@@ -68,6 +69,7 @@ class AiClientService {
         issues: note.issues,
         plans: note.plans,
         date: _formatDate(date),
+        industry: config.industry,
         apiLogEnabled: config.apiLogEnabled,
       ),
     );
