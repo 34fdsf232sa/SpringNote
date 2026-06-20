@@ -38,7 +38,7 @@ const _languageAliases = <String, String>{
 const _codeTextStyle = TextStyle(
   color: AppTheme.textMuted,
   fontSize: 13,
-  height: 1.65,
+  height: 1.4,
 );
 
 final Future<HighlighterTheme> _highlightThemeFuture = _loadHighlightTheme();
