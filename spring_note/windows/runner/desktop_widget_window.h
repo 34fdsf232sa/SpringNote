@@ -29,6 +29,8 @@ class DesktopWidgetWindow {
     int level = 1;
     int experience_percent = 0;
     double progress = 0.0;
+    std::wstring font_family = L"Segoe UI Variable";
+    double font_scale_factor = 1.0;
   };
 
   bool EnsureWindow();

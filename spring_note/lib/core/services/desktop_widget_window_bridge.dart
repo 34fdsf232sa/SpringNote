@@ -12,6 +12,8 @@ class DesktopWidgetWindowSnapshot {
     required this.level,
     required this.experiencePercent,
     required this.progress,
+    required this.appFont,
+    required this.fontScaleFactor,
   });
 
   final bool running;
@@ -21,6 +23,8 @@ class DesktopWidgetWindowSnapshot {
   final int level;
   final int experiencePercent;
   final double progress;
+  final String appFont;
+  final double fontScaleFactor;
 
   Map<String, Object?> toJson() {
     return {
@@ -31,6 +35,8 @@ class DesktopWidgetWindowSnapshot {
       'level': level,
       'experiencePercent': experiencePercent,
       'progress': progress,
+      'appFont': appFont,
+      'fontScaleFactor': fontScaleFactor,
     };
   }
 }

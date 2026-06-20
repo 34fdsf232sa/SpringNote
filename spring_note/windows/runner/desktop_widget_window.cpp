@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <string>
 
 namespace {
 
@@ -60,6 +61,41 @@ bool ReadBool(const flutter::EncodableMap& map,
   return std::get<bool>(it->second);
 }
 
+std::string ReadString(const flutter::EncodableMap& map,
+                       const char* key,
+                       const std::string& fallback = "") {
+  const auto it = map.find(flutter::EncodableValue(key));
+  if (it == map.end() || !std::holds_alternative<std::string>(it->second)) {
+    return fallback;
+  }
+  return std::get<std::string>(it->second);
+}
+
+std::wstring Utf8ToWide(const std::string& value) {
+  if (value.empty()) {
+    return L"";
+  }
+  const int required_size =
+      MultiByteToWideChar(CP_UTF8, 0, value.c_str(),
+                          static_cast<int>(value.size()), nullptr, 0);
+  if (required_size <= 0) {
+    return L"";
+  }
+  std::wstring result(required_size, L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, value.c_str(),
+                      static_cast<int>(value.size()), result.data(),
+                      required_size);
+  return result;
+}
+
+std::wstring ResolveFontFamily(const std::string& app_font) {
+  if (app_font.empty() || app_font == "system") {
+    return L"Segoe UI Variable";
+  }
+  const std::wstring font_family = Utf8ToWide(app_font);
+  return font_family.empty() ? L"Segoe UI Variable" : font_family;
+}
+
 void FillRoundRect(HDC dc, const RECT& rect, int radius, COLORREF color) {
   HBRUSH brush = CreateSolidBrush(color);
   HBRUSH old_brush = static_cast<HBRUSH>(SelectObject(dc, brush));
@@ -77,12 +113,13 @@ void DrawTextLine(HDC dc,
                   const RECT& rect,
                   int font_size,
                   int weight,
+                  const std::wstring& font_family,
                   COLORREF color,
                   UINT format) {
   HFONT font = CreateFont(
       -font_size, 0, 0, 0, weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
       OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-      DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI Variable");
+      DEFAULT_PITCH | FF_DONTCARE, font_family.c_str());
   HFONT old_font = static_cast<HFONT>(SelectObject(dc, font));
   SetBkMode(dc, TRANSPARENT);
   SetTextColor(dc, color);
@@ -151,6 +188,12 @@ void DesktopWidgetWindow::ShowOrUpdate(const flutter::EncodableMap& arguments) {
                  0, 99);
   state_.progress = std::clamp(ReadDouble(arguments, "progress", state_.progress),
                                0.0, 1.0);
+  state_.font_family =
+      ResolveFontFamily(ReadString(arguments, "appFont", "system"));
+  state_.font_scale_factor =
+      std::clamp(ReadDouble(arguments, "fontScaleFactor",
+                            state_.font_scale_factor),
+                 0.8, 1.4);
 
   if (!EnsureWindow()) {
     return;
@@ -226,13 +269,17 @@ void DesktopWidgetWindow::Paint() {
 
   RECT card{0, 0, kWindowWidth, kWindowHeight};
   FillRoundRect(memory_dc, card, kCornerRadius * 2, RGB(255, 255, 255));
+  const auto font_size = [this](int size) {
+    return std::max(
+        1, static_cast<int>(std::round(size * state_.font_scale_factor)));
+  };
 
   RECT header_rect{16, 14, kWindowWidth - 16, 32};
   std::wstringstream header_stream;
   header_stream << L"Lv." << state_.level << L" \u5b9e\u4e60\u751f ("
                 << state_.experience_percent << L"%)";
-  DrawTextLine(memory_dc, header_stream.str(), header_rect, 14, FW_SEMIBOLD,
-               RGB(102, 102, 102),
+  DrawTextLine(memory_dc, header_stream.str(), header_rect, font_size(14),
+               FW_SEMIBOLD, state_.font_family, RGB(102, 102, 102),
                DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
 
   RECT track{16, 39, kWindowWidth - 16, 41};
@@ -248,16 +295,18 @@ void DesktopWidgetWindow::Paint() {
   std::wstringstream coins_stream;
   coins_stream << std::fixed << std::setprecision(2) << state_.coins;
   RECT coins_rect{16, 54, kWindowWidth - 16, 98};
-  DrawTextLine(memory_dc, coins_stream.str(), coins_rect, 38, FW_MEDIUM,
-               RGB(23, 23, 23), DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+  DrawTextLine(memory_dc, coins_stream.str(), coins_rect, font_size(38),
+               FW_MEDIUM, state_.font_family, RGB(23, 23, 23),
+               DT_LEFT | DT_SINGLELINE | DT_VCENTER);
 
   std::wstringstream rate_stream;
   rate_stream << L"+" << std::fixed << std::setprecision(3)
               << (state_.running ? state_.coin_rate_per_second : 0.0)
               << L" coin/s";
   RECT rate_rect{16, 112, 140, 130};
-  DrawTextLine(memory_dc, rate_stream.str(), rate_rect, 14, FW_BOLD,
-               RGB(16, 185, 129), DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
+  DrawTextLine(memory_dc, rate_stream.str(), rate_rect, font_size(14), FW_BOLD,
+               state_.font_family, RGB(16, 185, 129),
+               DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS);
 
   HBRUSH dot_brush =
       CreateSolidBrush(state_.running ? RGB(16, 185, 129) : RGB(207, 207, 207));
@@ -272,8 +321,9 @@ void DesktopWidgetWindow::Paint() {
   DeleteObject(dot_brush);
 
   RECT time_rect{kWindowWidth - 84, 111, kWindowWidth - 16, 130};
-  DrawTextLine(memory_dc, FormatDuration(), time_rect, 13, FW_NORMAL,
-               RGB(102, 102, 102), DT_RIGHT | DT_SINGLELINE);
+  DrawTextLine(memory_dc, FormatDuration(), time_rect, font_size(13),
+               FW_NORMAL, state_.font_family, RGB(102, 102, 102),
+               DT_RIGHT | DT_SINGLELINE);
 
   HPEN border_pen = CreatePen(PS_SOLID, 1, RGB(229, 229, 229));
   HBRUSH hollow = static_cast<HBRUSH>(GetStockObject(HOLLOW_BRUSH));

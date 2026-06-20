@@ -1178,12 +1178,13 @@ class _EditorPaneState extends State<_EditorPane> {
 
   @override
   Widget build(BuildContext context) {
-    const editorStyle = TextStyle(
-      color: Color(0xFF3A3A3A),
-      fontFamily: 'Consolas',
-      fontSize: 15,
-      height: 1.75,
-    );
+    final editorStyle =
+        Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: const Color(0xFF3A3A3A),
+          fontSize: 15,
+          height: 1.75,
+        ) ??
+        const TextStyle(color: Color(0xFF3A3A3A), fontSize: 15, height: 1.75);
     return _PaneFrame(
       headerPadding: const EdgeInsets.only(left: 32, right: 16),
       header: Row(

@@ -108,6 +108,7 @@ class _AppShellState extends State<AppShell> {
     }
 
     final state = _desktopWidgetController.state;
+    final config = _localDataState.config;
     final progress = (_levelProgressController.state.experiencePercent / 100)
         .clamp(0.0, 1.0);
     unawaited(
@@ -120,6 +121,8 @@ class _AppShellState extends State<AppShell> {
           level: _levelProgressController.state.level,
           experiencePercent: _levelProgressController.state.experiencePercent,
           progress: progress,
+          appFont: config.appFont,
+          fontScaleFactor: AppTheme.fontScaleFactor(config.fontScale),
         ),
       ),
     );
