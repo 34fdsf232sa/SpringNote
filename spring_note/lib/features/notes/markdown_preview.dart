@@ -29,7 +29,7 @@ class MarkdownPreview extends StatelessWidget {
           style: textTheme.bodyLarge?.copyWith(
             color: const Color(0xFF3A3A3A),
             fontSize: 16,
-            height: 1.8,
+            height: 1.65,
           ),
           child: GptMarkdown(
             markdown,
@@ -40,7 +40,7 @@ class MarkdownPreview extends StatelessWidget {
             style: textTheme.bodyLarge?.copyWith(
               color: const Color(0xFF3A3A3A),
               fontSize: 16,
-              height: 1.8,
+              height: 1.65,
             ),
             onLinkTap: (url, title) {},
           ),

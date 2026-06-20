@@ -1184,7 +1184,7 @@ class _MemoryMessageView extends StatelessWidget {
                       MarkdownCodeBlock(language: name, code: code),
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: AppTheme.textMuted,
-                    height: 1.8,
+                    height: 1.65,
                   ),
                 ),
               ),
