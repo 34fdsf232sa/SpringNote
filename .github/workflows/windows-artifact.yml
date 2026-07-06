@@ -1,0 +1,70 @@
+name: Windows Artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-artifact.yml"
+      - "spring_note/**"
+
+concurrency:
+  group: windows-artifact-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows Portable Zip
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: spring_note
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Package portable zip
+        id: package
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(.+)$').Matches.Groups[1].Value.Trim()
+          $safeVersion = $version -replace '\+', '-'
+          $artifactName = "SpringNote-$safeVersion-windows-x64-portable"
+          $releaseDir = Join-Path $PWD "build\windows\x64\runner\Release"
+          $zipPath = Join-Path $PWD "build\windows\x64\runner\$artifactName.zip"
+          if (-not (Test-Path (Join-Path $releaseDir "SpringNote.exe"))) {
+            throw "SpringNote.exe was not found in $releaseDir"
+          }
+          if (Test-Path $zipPath) {
+            Remove-Item -LiteralPath $zipPath -Force
+          }
+          Compress-Archive -Path (Join-Path $releaseDir "*") -DestinationPath $zipPath -Force
+          "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
+          "zip_path=$zipPath" >> $env:GITHUB_OUTPUT
+
+      - name: Upload portable zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: ${{ steps.package.outputs.zip_path }}
+          if-no-files-found: error

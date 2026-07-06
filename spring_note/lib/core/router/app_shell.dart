@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../features/ai_daily/ai_daily_page.dart';
 import '../../features/home/home_page.dart';
 import '../../features/memory/memory_page.dart';
 import '../../features/notes/notes_page.dart';
@@ -25,7 +26,7 @@ import '../services/tray_service.dart';
 import '../services/update_check_service.dart';
 import '../theme/app_theme.dart';
 
-enum AppSection { home, notes, memory, settings }
+enum AppSection { home, notes, aiDaily, memory, settings }
 
 enum _StartupCloudSyncFailureKind { offline, temporary, permanent }
 
@@ -602,6 +603,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                       externalNoteUpdate: _noteExternalUpdate,
                       noteUploadQueue: _noteUploadQueue,
                     ),
+                    AiDailyPage(localDataState: _localDataState),
                     MemoryPage(localDataState: _localDataState),
                     SettingsPage(
                       localDataState: _localDataState,
@@ -666,6 +668,13 @@ class GlobalSidebar extends StatelessWidget {
             tooltip: '便签',
             selected: selectedSection == AppSection.notes,
             onPressed: () => onSectionSelected(AppSection.notes),
+          ),
+          const SizedBox(height: 8),
+          _SidebarButton(
+            icon: _SidebarIconType.sparkles,
+            tooltip: 'AI 日报',
+            selected: selectedSection == AppSection.aiDaily,
+            onPressed: () => onSectionSelected(AppSection.aiDaily),
           ),
           const SizedBox(height: 8),
           _SidebarButton(
@@ -767,12 +776,13 @@ IconData _legacyMaterialIcon(_SidebarIconType icon) {
   return switch (icon) {
     _SidebarIconType.layoutDashboard => Icons.dashboard_outlined,
     _SidebarIconType.stickyNote => Icons.sticky_note_2_outlined,
+    _SidebarIconType.sparkles => Icons.auto_awesome_outlined,
     _SidebarIconType.bookOpen => Icons.menu_book_outlined,
     _SidebarIconType.settings => Icons.settings_outlined,
   };
 }
 
-enum _SidebarIconType { layoutDashboard, stickyNote, bookOpen, settings }
+enum _SidebarIconType { layoutDashboard, stickyNote, sparkles, bookOpen, settings }
 
 class _SidebarLucideIcon extends StatelessWidget {
   const _SidebarLucideIcon({
@@ -869,6 +879,25 @@ class _SidebarLucidePainter extends CustomPainter {
           ..cubicTo(12 * sx, 19.35 * sy, 10.65 * sx, 18 * sy, 9 * sx, 18 * sy)
           ..lineTo(3 * sx, 18 * sy);
         canvas.drawPath(bookPath, paint);
+        break;
+      case _SidebarIconType.sparkles:
+        void drawSparkle(double cx, double cy, double r) {
+          final sparklePath = Path()
+            ..moveTo(cx * sx, (cy - r) * sy)
+            ..lineTo((cx + r * 0.45) * sx, (cy - r * 0.45) * sy)
+            ..lineTo((cx + r) * sx, cy * sy)
+            ..lineTo((cx + r * 0.45) * sx, (cy + r * 0.45) * sy)
+            ..lineTo(cx * sx, (cy + r) * sy)
+            ..lineTo((cx - r * 0.45) * sx, (cy + r * 0.45) * sy)
+            ..lineTo((cx - r) * sx, cy * sy)
+            ..lineTo((cx - r * 0.45) * sx, (cy - r * 0.45) * sy)
+            ..close();
+          canvas.drawPath(sparklePath, paint);
+        }
+
+        drawSparkle(12, 7, 4);
+        drawSparkle(7, 16, 2.4);
+        drawSparkle(17, 15, 2.8);
         break;
       case _SidebarIconType.settings:
         final settingsPath = Path()
