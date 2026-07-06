@@ -204,9 +204,11 @@ class _AiDailyPageState extends State<AiDailyPage> {
         ? content.replaceFirst(sectionPattern, priorityMarkdown.trimRight())
         : content.replaceFirst(
             RegExp(r'^(# .+\n+)', dotAll: true),
-            '$1$priorityMarkdown\n',
+            r'$1' + priorityMarkdown + '\n',
           );
-    await file.writeAsString(nextContent.endsWith('\n') ? nextContent : '$nextContent\n');
+    await file.writeAsString(
+      nextContent.endsWith('\n') ? nextContent : '$nextContent\n',
+    );
   }
 
   String _priorityMarkdown(List<Map<String, dynamic>> items) {
@@ -235,6 +237,8 @@ class _AiDailyPageState extends State<AiDailyPage> {
       'powershell.exe',
       [
         '-NoProfile',
+        '-WindowStyle',
+        'Hidden',
         '-ExecutionPolicy',
         'Bypass',
         '-File',
